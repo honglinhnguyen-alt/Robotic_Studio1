@@ -1,2 +1,2 @@
 # Robotic_Studio1
-41068 Robotic Studio 1 Project. 
+Autonomous forest wildlife monitoring system using a Husky robot equipped with LiDAR, a thermal camera, and an RGB camera. The robot autonomously navigates through the forest while using LiDAR for obstacle avoidance. A thermal camera detects potential heat sources, triggering the RGB camera and a YOLO-based object detection model to identify whether the source is an animal and classify its species. The detected animal type and location are then transmitted to a GUI for real-time monitoring and reporting.
