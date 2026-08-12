@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+
+  <model name="male_deer">
+
+    <static>true</static>
+
+    <link name="deer_link">
+
+      <visual name="deer_visual">
+
+        <geometry>
+          <mesh>
+            <uri>meshes/male_deer.dae</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+
+      </visual>
+
+      <collision name="deer_collision">
+
+        <geometry>
+          <mesh>
+            <uri>meshes/male_deer.dae</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+
+      </collision>
+
+    </link>
+
+  </model>
+
+</sdf>
