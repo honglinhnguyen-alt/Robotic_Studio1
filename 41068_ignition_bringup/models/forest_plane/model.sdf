@@ -34,7 +34,7 @@
                 <pbr>
                     <metal>
                     <albedo_map>
-                        model://forest_plane/materials/textures/forest_overhead.png
+                        model://forest_plane/materials/textures/forest_overhead_plain.png
                     </albedo_map>
                     </metal>
                 </pbr>

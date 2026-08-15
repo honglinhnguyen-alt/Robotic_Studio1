@@ -136,7 +136,7 @@
     </include>
 
     <!-- Oak trees -->
-    <include>
+    <!-- <include>
       <uri>
         https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
       </uri>
@@ -191,10 +191,10 @@
       </uri>
       <name>oak8</name>
       <pose>3.54698 5 -0.3 0 -0 0.1</pose>
-    </include>
+    </include> -->
     
     <!-- Pine trees -->
-    <include>
+    <!-- <include>
       <uri>
         https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
       </uri>
@@ -235,7 +235,7 @@
       </uri>
       <name>pine6</name>
       <pose>-2.27195 -8.68441 0 0 -0 0.9</pose>
-    </include>
+    </include> -->
 
     <!-- Platypus -->
     <include>
@@ -247,13 +247,13 @@
     </include>
 
     <!-- Gazebo -->
-    <include>
+    <!-- <include>
       <uri>
         https://fuel.gazebosim.org/1.0/OpenRobotics/models/Gazebo
       </uri>
       <name>gazebo1</name>
       <pose>10 -10 0 0 0 0</pose>
-    </include>
+    </include> -->
 
     <!-- Rocks -->
     <include>
@@ -338,6 +338,271 @@
       <name>male_deer1</name>
       <pose>-3 5 0 0 0 0</pose>
     </include>
+
+    <!-- Custom Rock 1 -->
+    <include>
+      <uri>model://rock_1</uri>
+      <name>custom_rock_1</name>
+      <pose>-2 -3 0 0 0 0</pose>
+    </include>
+
+    <!-- Custom Rock 2 -->
+    <include>
+      <uri>model://rock_2</uri>
+      <name>custom_rock_2</name>
+      <pose>0 -5 0 0 0 0.5</pose>
+    </include>
+
+    <!-- Tall Tree -->
+    <!-- <include>
+      <uri>model://tall_tree</uri>
+      <name>tall_tree1</name>
+      <pose>9 4 0 0 0 0</pose>
+    </include> -->
+
+    <!-- ========================================================= -->
+    <!-- TWISTED TREES                                             -->
+    <!-- ========================================================= -->
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree1</name>
+      <pose>10 9 0 0 0 1.0</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree2</name>
+      <pose>-10 10 0 0 0 0.3</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree3</name>
+      <pose>-5 10 0 0 0 1.4</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree4</name>
+      <pose>0 10 0 0 0 2.2</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree5</name>
+      <pose>9 0 0 0 0 0.8</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree6</name>
+      <pose>9 -5 0 0 0 2.7</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree7</name>
+      <pose>4 -10 0 0 0 1.8</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree8</name>
+      <pose>-3 -10 0 0 0 0.5</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree9</name>
+      <pose>-7 2 0 0 0 0.4</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree10</name>
+      <pose>-4 1 0 0 0 1.3</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree11</name>
+      <pose>-1 3 0 0 0 2.4</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree12</name>
+      <pose>3 3 0 0 0 0.9</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree13</name>
+      <pose>6 2 0 0 0 2.1</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree14</name>
+      <pose>-6 -2 0 0 0 1.8</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree15</name>
+      <pose>-4 -5 0 0 0 0.6</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree16</name>
+      <pose>3 -2 0 0 0 2.8</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree17</name>
+      <pose>5 -1 0 0 0 1.1</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree18</name>
+      <pose>4 -6 0 0 0 2.3</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree19</name>
+      <pose>-7 -9 0 0 0 0.2</pose>
+    </include>
+
+    <include>
+      <uri>model://twisted_tree</uri>
+      <name>twisted_tree20</name>
+      <pose>7 7 0 0 0 1.6</pose>
+    </include>
+
+
+    <!-- ========================================================= -->
+    <!-- AUTUMN TREES                                              -->
+    <!-- ========================================================= -->
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree1</name>
+      <pose>11 4 0 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree2</name>
+      <pose>5 10 0 0 0 0.6</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree3</name>
+      <pose>-10 1 0 0 0 1.7</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree4</name>
+      <pose>-9 -1.5 0 0 0 2.5</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree5</name>
+      <pose>10 -2 0 0 0 1.1</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree6</name>
+      <pose>8 -9 0 0 0 2.9</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree7</name>
+      <pose>-6 -10 0 0 0 0.9</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree8</name>
+      <pose>-10 -9 0 0 0 2.0</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree9</name>
+      <pose>-8 4 0 0 0 2.5</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree10</name>
+      <pose>-5 7 0 0 0 0.8</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree11</name>
+      <pose>-1 7 0 0 0 1.9</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree12</name>
+      <pose>2 5 0 0 0 2.7</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree13</name>
+      <pose>7 4 0 0 0 0.5</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree14</name>
+      <pose>-8 -3 0 0 0 1.4</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree15</name>
+      <pose>-5 -7 0 0 0 2.2</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree16</name>
+      <pose>-1 -8 0 0 0 0.7</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree17</name>
+      <pose>2 -7 0 0 0 1.7</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree18</name>
+      <pose>7 -2 0 0 0 2.9</pose>
+    </include>
+
+    <include>
+      <uri>model://autumn_tree</uri>
+      <name>autumn_tree19</name>
+      <pose>9 6 0 0 0 1.2</pose>
+    </include>
+
     <!-- Dynamic world demo models -->
     <!-- These simple marker models are manipulated by scripts/dynamic_world_demo.py.
          They are intentionally defined in this world, rather than spawned by the
