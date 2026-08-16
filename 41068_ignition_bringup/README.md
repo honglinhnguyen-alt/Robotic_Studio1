@@ -297,3 +297,149 @@ If you get an error like:
 ```bash
 export QT_QPA_PLATFORM=xcb
 ```
+
+
+
+## YOLO Animal Detection
+
+This package includes a YOLO-based animal detection node for detecting animals from the Husky RGB camera in the `large_demo` world.
+
+The trained YOLO model is stored in:
+
+```text
+weights/my_model.pt
+```
+
+The detector node is:
+
+```text
+scripts/animal_yolo_detector.py
+```
+
+and can be launched using:
+
+```text
+launch/41068_yolo.launch.py
+```
+
+### Build the package
+
+After pulling any new changes, build the package:
+
+```bash
+cd ~/41068_ws
+source /opt/ros/humble/setup.bash
+
+colcon build --packages-select 41068_ignition_bringup
+
+source install/setup.bash
+```
+
+### 1. Launch the Husky simulation
+
+For the full Husky setup with SLAM, Nav2, RViz, and the `large_demo` world:
+
+```bash
+cd ~/41068_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+
+ros2 launch 41068_ignition_bringup \
+41068_ignition_husky.launch.py \
+slam:=true nav2:=true rviz:=true world:=large_demo
+```
+
+Alternatively, the simulation can be launched without SLAM, Nav2, and RViz:
+
+```bash
+ros2 launch 41068_ignition_bringup \
+41068_ignition_husky.launch.py \
+world:=large_demo
+```
+
+### 2. Run the YOLO detector
+
+Open a second terminal:
+
+```bash
+cd ~/41068_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+
+ros2 launch 41068_ignition_bringup \
+41068_yolo.launch.py \
+model_path:=$HOME/41068_ws/src/41068_ignition_bringup/weights/my_model.pt
+```
+
+The YOLO node uses the Husky RGB camera image and runs the trained animal detection model on each received frame.
+
+If the YOLO / Ultralytics Python package is not installed on the computer, install it before running the detector:
+
+```bash
+pip install ultralytics
+```
+
+### 3. View the YOLO camera output
+
+Open another terminal:
+
+```bash
+cd ~/41068_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+
+ros2 run rqt_image_view rqt_image_view
+```
+
+In `rqt_image_view`, select the YOLO detection image topic to view the camera stream with detected animals and bounding boxes.
+
+### 4. Randomise animal positions
+
+The positions of the animals in `large_demo` can be randomised using:
+
+```bash
+python3 ~/41068_ws/src/41068_ignition_bringup/scripts/random_animal_spawn.py
+```
+
+This can be useful for testing YOLO under different animal positions, distances, viewing angles, and backgrounds instead of testing repeatedly with the same fixed scene.
+
+Run the main Gazebo simulation before running this script.
+
+### 5. Manually drive the Husky
+
+The Husky can also be controlled using the keyboard:
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+--ros-args -r cmd_vel:=/husky1/cmd_vel
+```
+
+This is useful for manually moving the Husky around the environment while checking YOLO detections from different distances and camera angles.
+
+### Typical YOLO testing workflow
+
+A typical test uses several terminals:
+
+```text
+Terminal 1: Husky + Gazebo + SLAM + Nav2 + RViz
+Terminal 2: YOLO animal detector
+Terminal 3: rqt_image_view
+Terminal 4: keyboard teleoperation (optional)
+Terminal 5: random animal position script (when required)
+```
+
+The recommended main simulation command is:
+
+```bash
+ros2 launch 41068_ignition_bringup \
+41068_ignition_husky.launch.py \
+slam:=true nav2:=true rviz:=true world:=large_demo
+```
+
+Then run the YOLO detector separately:
+
+```bash
+ros2 launch 41068_ignition_bringup \
+41068_yolo.launch.py \
+model_path:=$HOME/41068_ws/src/41068_ignition_bringup/weights/my_model.pt
+```
