@@ -7,19 +7,21 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-
 find_package(ros_ign_interfaces REQUIRED)
 
+# Install the package resources. "weights" is added for the trained YOLO model.
 install(
-  DIRECTORY config launch models urdf_husky worlds urdf_parrot
+  DIRECTORY config launch models urdf_husky worlds urdf_parrot weights
   DESTINATION share/${PROJECT_NAME}
 )
 
+# Install executable Python nodes. Only the YOLO node is added here; no thermal
+# node is included at this stage.
 install(
   PROGRAMS
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
-    scripts/capture_yolo_dataset.py
+    scripts/animal_yolo_detector.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

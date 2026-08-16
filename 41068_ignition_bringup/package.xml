@@ -14,7 +14,7 @@
   <depend>ros_ign_gazebo</depend>
   <depend>ros_ign_bridge</depend>
 
-  <!-- Other -->
+  <!-- Existing package dependencies -->
   <depend>robot_localization</depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>action_msgs</exec_depend>
@@ -24,7 +24,13 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
-  <exec_depend>python3-opencv</exec_depend>
+
+  <!-- RGB YOLO perception only -->
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>vision_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

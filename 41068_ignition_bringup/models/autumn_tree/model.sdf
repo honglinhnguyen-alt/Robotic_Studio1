@@ -11,7 +11,7 @@
         <geometry>
           <mesh>
             <uri>meshes/autumn_tree.dae</uri>
-            <scale>1 1 1</scale>
+            <scale>1.5 1.5 1.5</scale>
           </mesh>
         </geometry>
       </visual>
@@ -20,7 +20,7 @@
         <geometry>
           <mesh>
             <uri>meshes/autumn_tree.dae</uri>
-            <scale>1 1 1</scale>
+            <scale>1.5 1.5 1.5</scale>
           </mesh>
         </geometry>
       </collision>
