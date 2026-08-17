@@ -1,3 +1,6 @@
-
 .vscode/
 
+# ROS2 / CMake generated files
+build/
+install/
+log/
