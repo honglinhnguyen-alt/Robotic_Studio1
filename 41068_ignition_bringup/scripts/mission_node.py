@@ -10,10 +10,8 @@ from std_msgs.msg import String, Bool
 from std_srvs.srv import Trigger
 
 
-# ============================================================
-# Mission states
-# ============================================================
 
+# Mission states
 class MissionState(Enum):
     INITIALISING = 0
     COVERAGE = 1
@@ -21,10 +19,7 @@ class MissionState(Enum):
     COMPLETE = 3
 
 
-# ============================================================
 # Candidate states
-# ============================================================
-
 class CandidateState(Enum):
     UNINVESTIGATED = 0
     INVESTIGATING = 1
@@ -52,7 +47,7 @@ class MissionNode(Node):
         self.candidate_merge_distance = 1.0
 
 
-        # ---------------- Subscribers ----------------
+        # ------------ Subscribers ----------------
 
 
 
@@ -63,12 +58,12 @@ class MissionNode(Node):
 
         self.result_sub = self.create_subscription(String, 'Yolo_result', self.result_callback, 10)
 
-        # ---------------- Publisher --------------------------------------------------------------------------------------------
+        # ------------- Publisher --------------------------------------------------------------------------------------------
 
 
 
         
-        self.investigation_target_pub = self.create_publisher(String,'navigation_target',10)
+        self.investigation_target_pub = self.create_publisher(Point,'navigation_target',10)
 
         # puase/ resume package
         self.exploration_resume_pub = self.create_publisher(Bool,'exploration_command',10)
@@ -88,9 +83,9 @@ class MissionNode(Node):
         self.get_logger().info('Mission Node started')
 
 
-    # ========================================================
-    # MISSION STATE MACHINE
-    # ========================================================
+    
+    #       mission main logic (state machine)
+
 
     def _mission_tick(self):
 
@@ -200,13 +195,9 @@ class MissionNode(Node):
             return
 
 
-    # ========================================================
-    # RECEIVE NEW CANDIDATE
-    # ========================================================
 
-   
-
-
+    # receive candidate from yolo
+    #
     def _candidate_callback(self, msg: Point):
 
 
