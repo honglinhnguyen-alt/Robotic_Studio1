@@ -66,7 +66,7 @@ class MissionNode(Node):
         self.investigation_target_pub = self.create_publisher(Point,'navigation_target',10)
 
         # puase/ resume package
-        self.exploration_resume_pub = self.create_publisher(Bool,'exploration_command',10)
+        self.exploration_resume_pub = self.create_publisher(Bool,'/husky1/explore/resume',10)
 
 
 
