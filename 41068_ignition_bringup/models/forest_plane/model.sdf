@@ -1,45 +1,61 @@
 <sdf version="1.7">
 <model name="grass_plane">
     <static>true</static>
+
     <link name="link">
+
         <!--<collision name="collision">
             <geometry>
             <plane>
                 <normal>0 0 1</normal>
-                <size>25 25</size>
+                <size>100 100</size>
             </plane>
             </geometry>
         </collision>-->
+
         <collision name="collision">
             <geometry>
             <box>
                 <normal>0 0 1</normal>
-                <size>25 25 0.01</size>
+                <size>100 100 0.01</size>
             </box>
             </geometry>
         </collision>
+
         <visual name="visual">
             <cast_shadows>false</cast_shadows>
+
             <geometry>
-            <plane>
-                <normal>0 0 1</normal>
-                <size>25 25</size>
-            </plane>
+                <plane>
+                    <normal>0 0 1</normal>
+                    <size>100 100</size>
+                </plane>
             </geometry>
+
             <material>
                 <!-- <diffuse>0.8 0.8 0.8 1</diffuse> -->
-                <ambient>1.0 1.0 1.0 1</ambient>
-                <diffuse>1.0 1.0 1.0 1</diffuse>
+                <ambient>0.8 0.8 0.8 1</ambient>
+                <diffuse>0.8 0.8 0.8 1</diffuse>
+
                 <!--<specular>1.0 1.0 1.0 1</specular>-->
+
                 <pbr>
                     <metal>
-                    <albedo_map>
-                        model://forest_plane/materials/textures/forest_overhead_plain.png
-                    </albedo_map>
+                        <albedo_map>
+                            model://forest_plane/materials/textures/forest_overhead_plain.png
+                        </albedo_map>
                     </metal>
                 </pbr>
             </material>
+
+            <plugin
+                filename="ignition-gazebo-thermal-system"
+                name="gz::sim::systems::Thermal">
+                <temperature>293.15</temperature>
+            </plugin>
+
         </visual>
+
     </link>
 </model>
 </sdf>

@@ -1,6 +1,18 @@
+# VS Code
 .vscode/
 
-# ROS2 / CMake generated files
+# Python-generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# ROS 2 / CMake generated files
 build/
 install/
 log/
+
+# Temporary files
+*.tmp
+*.swp
+*~

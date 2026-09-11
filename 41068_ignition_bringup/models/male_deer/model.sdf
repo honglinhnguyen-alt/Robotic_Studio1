@@ -7,16 +7,22 @@
 
     <link name="deer_link">
 
-      <visual name="deer_visual">
+    <visual name="deer_visual">
 
-        <geometry>
-          <mesh>
-            <uri>meshes/male_deer.dae</uri>
-            <scale>1 1 1</scale>
-          </mesh>
-        </geometry>
+      <geometry>
+        <mesh>
+          <uri>meshes/male_deer.dae</uri>
+          <scale>1 1 1</scale>
+        </mesh>
+      </geometry>
 
-      </visual>
+      <plugin
+        filename="ignition-gazebo-thermal-system"
+        name="gz::sim::systems::Thermal">
+        <temperature>330.15</temperature>
+      </plugin>
+
+    </visual>
 
       <collision name="deer_collision">
 

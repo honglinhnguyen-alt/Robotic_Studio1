@@ -7,14 +7,20 @@
 
     <link name="tree_link">
 
-      <visual name="tree_visual">
-        <geometry>
-          <mesh>
-            <uri>meshes/autumn_tree.dae</uri>
-            <scale>1.5 1.5 1.5</scale>
-          </mesh>
-        </geometry>
-      </visual>
+<visual name="tree_visual">
+
+  <geometry>
+    <mesh>
+      <uri>meshes/autumn_tree.dae</uri>
+      <scale>1.5 1.5 1.5</scale>
+    </mesh>
+  </geometry>
+<plugin
+  filename="ignition-gazebo-thermal-system"
+  name="gz::sim::systems::Thermal">
+  <temperature>300.15</temperature>
+</plugin>
+</visual>
 
       <collision name="tree_collision">
         <geometry>

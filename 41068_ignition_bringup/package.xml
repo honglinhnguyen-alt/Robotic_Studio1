@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>41068_ignition_bringup</name>
-  <version>1.0.5</version>
+  <version>1.1.0</version>
   <description>41068 Robotics Studio 1 Gazebo simulation and basic autonomy</description>
   <maintainer email="graeme.best@uts.edu.au">Graeme Best, University of Technology Sydney</maintainer>
   <license>Apache 2.0</license>
@@ -22,10 +22,12 @@
   <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
 
-  <!-- RGB YOLO perception only -->
+  <!-- RGB, thermal, and thermal-gated YOLO perception -->
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>vision_msgs</exec_depend>
