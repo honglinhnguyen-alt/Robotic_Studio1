@@ -98,7 +98,7 @@ class MissionNode(Node):
         if self.state == MissionState.INITIALISING:
 
 
-            #應該不需等他直接進入coverage as 另一個node會直接發它
+            #應該不需等他直接進入coverage as 另一個node會直接發它????
             #if not self.coverage_received:
             #    self.get_logger().info('Waiting for coverage points...', throttle_duration_sec=5.0)
             #    return
@@ -250,8 +250,7 @@ class MissionNode(Node):
         return None
 
 
-
-    # 這邊只send candidate location
+   ## send candidate location 給husky
     def _publish_investigation_target(self, x, y):
 
         msg = Point()
@@ -264,6 +263,27 @@ class MissionNode(Node):
 
         self.get_logger().info( f'Investigation target sent to R3: ({x:.2f}, {y:.2f})'
     )
+
+
+    # 如果收到thermal candidate 由mission pub 給nav2 ((問題是誰接收result?))
+    # def _publish_investigation_target(self, x, y):
+
+    #  observation_distance = 1.0
+ 
+    #  observation_x = x - observation_distance
+    #  observation_y = y
+
+    #  msg = Point()
+    #  msg.x = observation_x
+    #  msg.y = observation_y
+    #  msg.z = 0.0
+
+    #  self.investigation_target_pub.publish(msg)
+
+    #  self.get_logger().info(
+    #     f'Candidate at ({x:.2f}, {y:.2f}), '
+    #     f'observation point sent: ({observation_x:.2f}, {observation_y:.2f})'
+    # )
 
 
     # ========================================================

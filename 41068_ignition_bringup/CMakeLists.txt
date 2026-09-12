@@ -21,8 +21,8 @@ install(
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
     scripts/animal_yolo_detector.py
-=======
     scripts/thermal_candidate_detector.py
+    scripts/coverage.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -31,7 +31,6 @@ install(
 install(
   FILES
     scripts/perception_common.py
->>>>>>> 8bacc77d4f45546c2e3bee0a25921f9125278f1b
   DESTINATION lib/${PROJECT_NAME}
 )
 
