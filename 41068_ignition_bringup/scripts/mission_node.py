@@ -28,7 +28,6 @@ class CandidateState(Enum):
    
 
 
-
 class MissionNode(Node):
 
     def __init__(self):
@@ -99,9 +98,10 @@ class MissionNode(Node):
         if self.state == MissionState.INITIALISING:
 
 
-            if not self.coverage_received:
-                self.get_logger().info('Waiting for coverage points...', throttle_duration_sec=5.0)
-                return
+            #應該不需等他直接進入coverage as 另一個node會直接發它
+            #if not self.coverage_received:
+            #    self.get_logger().info('Waiting for coverage points...', throttle_duration_sec=5.0)
+            #    return
 
             self.get_logger().info('Mission initialised.')
             self.state = MissionState.COVERAGE
@@ -250,12 +250,8 @@ class MissionNode(Node):
         return None
 
 
-    # ========================================================
-    # PUBLISH NAVIGATION TARGET
-    # ========================================================
 
-
-
+    # 這邊只send candidate location
     def _publish_investigation_target(self, x, y):
 
         msg = Point()
