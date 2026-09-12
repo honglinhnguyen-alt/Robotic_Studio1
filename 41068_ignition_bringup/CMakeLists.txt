@@ -22,7 +22,6 @@ install(
     scripts/basic_autonomy_demo.py
     scripts/animal_yolo_detector.py
     scripts/thermal_candidate_detector.py
-    scripts/coverage.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
