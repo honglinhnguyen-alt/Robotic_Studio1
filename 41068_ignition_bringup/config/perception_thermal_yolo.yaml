@@ -1,0 +1,67 @@
+/**/thermal_candidate_detector:
+  ros__parameters:
+    image_topic: thermal/image_raw
+    normalized_topic: thermal/image_mono8
+    detections_topic: perception/thermal/detections
+    annotated_topic: perception/thermal/annotated_image
+    candidate_active_topic: perception/thermal/candidate_active
+    max_temperature_topic: perception/thermal/max_temperature
+
+    # Gazebo Fortress L16 thermal images use 0.01 kelvin per count.
+    kelvin_per_count: 0.01
+    display_min_k: 285.0
+    display_max_k: 335.0
+
+    # Animals and the campfire in large_demo are configured at 330.15 K,
+    # while the warmest background object is 300.15 K.
+    hot_threshold_k: 315.0
+    min_hot_area_px: 30
+    morphology_kernel_px: 3
+    persistence_frames: 2
+    # Each connected region must persist independently before it is published.
+    tracking_iou_threshold: 0.20
+    tracking_max_missed_frames: 1
+    max_regions: 5
+    publish_annotated_image: true
+    log_period_sec: 2.0
+
+/**/animal_yolo_detector:
+  ros__parameters:
+    image_topic: camera/image
+    confidence: 0.50
+    iou: 0.70
+    imgsz: 640
+    device: ''
+    publish_annotated_image: true
+
+    # Thermal gating prevents continuous YOLO inference. The Trigger service
+    # remains available for a fresh classification after navigation.
+    continuous: false
+    max_inference_hz: 3.0
+    thermal_gate_enabled: true
+    thermal_detections_topic: perception/thermal/detections
+    thermal_retrigger_sec: 0.0
+    max_rgb_thermal_age_sec: 1.0
+
+    # Do not make a mission decision from one image. Each thermal candidate is
+    # classified only when the same YOLO class wins at least 3 of 5 RGB frames.
+    verification_frames: 5
+    verification_min_votes: 3
+
+    # Camera values match urdf_husky/husky.gazebo.xacro.
+    thermal_image_width: 320
+    thermal_image_height: 240
+    thermal_hfov_deg: 60.0
+    rgb_hfov_deg: 120.0
+    thermal_roi_margin: 1.5
+    thermal_rgb_offset_x_px: 0.0
+    thermal_rgb_offset_y_px: 0.0
+    minimum_thermal_overlap: 0.05
+
+    native_classes: [kangaroo]
+    exotic_classes: [boar, deer]
+    fused_detections_topic: perception/thermal_yolo/detections
+    classification_topic: perception/thermal_yolo/result
+    publish_legacy_result: true
+    # Absolute name matches the current root-level mission_node subscriber.
+    legacy_result_topic: /Yolo_result

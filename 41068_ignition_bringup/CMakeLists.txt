@@ -15,14 +15,23 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-# Install executable Python nodes. Only the YOLO node is added here; no thermal
-# node is included at this stage.
+# Install executable Python nodes.
 install(
   PROGRAMS
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
     scripts/animal_yolo_detector.py
-    scripts/coverage.py
+=======
+    scripts/thermal_candidate_detector.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Imported by the perception executables. Keeping this as a regular file avoids
+# exposing it as a ros2 run entry point.
+install(
+  FILES
+    scripts/perception_common.py
+>>>>>>> 8bacc77d4f45546c2e3bee0a25921f9125278f1b
   DESTINATION lib/${PROJECT_NAME}
 )
 

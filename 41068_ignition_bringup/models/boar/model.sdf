@@ -4,14 +4,24 @@
     <static>true</static>
 
     <link name="link">
-      <visual name="visual">
-        <geometry>
-          <mesh>
-            <uri>meshes/boar.dae</uri>
-            <scale>1 1 1</scale>
-          </mesh>
-        </geometry>
-      </visual>
+    <visual name="visual">
+
+      <geometry>
+        <mesh>
+          <uri>meshes/boar.dae</uri>
+          <scale>1 1 1</scale>
+        </mesh>
+      </geometry>
+
+      <plugin
+        filename="ignition-gazebo-thermal-system"
+        name="gz::sim::systems::Thermal">
+
+        <temperature>330.15</temperature>
+
+      </plugin>
+
+    </visual>
 
       <collision name="collision">
         <geometry>

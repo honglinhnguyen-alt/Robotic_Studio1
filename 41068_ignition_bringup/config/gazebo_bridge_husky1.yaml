@@ -60,3 +60,17 @@
   ros_type_name: "sensor_msgs/msg/PointCloud2"
   gz_type_name: "ignition.msgs.PointCloudPacked"
   direction: GZ_TO_ROS
+
+# Thermal camera: image
+- ros_topic_name: "thermal/image_raw"
+  gz_topic_name: "/model/husky1/thermal_camera/image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: GZ_TO_ROS
+
+# Thermal camera: camera info
+- ros_topic_name: "thermal/camera_info"
+  gz_topic_name: "/model/husky1/thermal_camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "ignition.msgs.CameraInfo"
+  direction: GZ_TO_ROS

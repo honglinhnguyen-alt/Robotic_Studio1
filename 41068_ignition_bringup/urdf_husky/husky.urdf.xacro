@@ -155,6 +155,32 @@
       <material name="dark"/>
     </visual>
   </link>
+  
+    <!-- Thermal camera mounted beside RGB camera -->
+  <joint name="${prefix}thermal_camera_joint" type="fixed">
+    <origin xyz="0.0 -0.06 0.0" rpy="0 0 0"/>
+    <parent link="${prefix}camera_link"/>
+    <child link="${prefix}thermal_camera_link"/>
+  </joint>
+
+  <link name="${prefix}thermal_camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.03 0.05 0.04"/>
+      </geometry>
+      <material name="dark"/>
+    </visual>
+  </link>
+
+  <joint name="${prefix}thermal_camera_optical_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="-1.57 0 -1.57"/>
+    <parent link="${prefix}thermal_camera_link"/>
+    <child link="${prefix}thermal_camera_optical_frame"/>
+  </joint>
+
+  <link name="${prefix}thermal_camera_optical_frame"/>
+
 
   <joint name="${prefix}camera_rgb_joint" type="fixed">
     <origin xyz="${r200_cam_rgb_px} ${r200_cam_rgb_py} ${r200_cam_rgb_pz}" rpy="0 0 0"/>
