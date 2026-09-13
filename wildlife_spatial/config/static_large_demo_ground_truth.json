@@ -1,0 +1,25 @@
+{
+  "frame_id": "husky1_map",
+  "objects": [
+    {
+      "id": "female_deer1",
+      "class_name": "deer",
+      "position": {"x": -6.0, "y": 5.0, "z": 0.0}
+    },
+    {
+      "id": "male_deer1",
+      "class_name": "deer",
+      "position": {"x": -3.0, "y": 5.0, "z": 0.0}
+    },
+    {
+      "id": "kangaroo1",
+      "class_name": "kangaroo",
+      "position": {"x": 4.0, "y": 7.0, "z": 0.0}
+    },
+    {
+      "id": "boar1",
+      "class_name": "boar",
+      "position": {"x": 7.0, "y": -5.0, "z": 0.0}
+    }
+  ]
+}
