@@ -38,7 +38,7 @@ def generate_launch_description():
         'world',
         default_value='simple_trees',
         description='Which world to load',
-        choices=['simple_trees', 'large_demo'],
+        choices=['simple_trees', 'large_demo', 'obstacle_test'], #for luke's test
     ))
 
     ld.add_action(IncludeLaunchDescription(

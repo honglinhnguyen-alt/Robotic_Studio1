@@ -22,6 +22,7 @@ install(
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
     scripts/animal_yolo_detector.py
+    scripts/obstacle_avoidance_test.py #luke's
   DESTINATION lib/${PROJECT_NAME}
 )
 
