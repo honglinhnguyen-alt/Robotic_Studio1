@@ -269,11 +269,11 @@ def generate_launch_description():
     )
     ld.add_action(parrot_launch_arg)
 
-    world_launch_arg = DeclareLaunchArgument(
+        world_launch_arg = DeclareLaunchArgument(
         'world',
         default_value='simple_trees',
         description='Which world to load',
-        choices=['simple_trees', 'large_demo','explore_test'],
+        choices=['simple_trees', 'large_demo', 'explore_test', 'obstacle_test'],
     )
     ld.add_action(world_launch_arg)
 
