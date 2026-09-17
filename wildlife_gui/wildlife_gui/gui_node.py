@@ -32,7 +32,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from wildlife_gui.detections_panel import DetectionsPanel
-
+from wildlife_gui.animal_records_panel import AnimalRecordsPanel
+from PyQt5.QtWidgets import QTabWidget
 
 class WildlifeNode(Node):
     """Receive ROS data without accessing GUI widgets."""
@@ -135,7 +136,7 @@ class WildlifeWindow(QWidget):
 
         self.camera_label = QLabel("Waiting for RGB camera...")
         self.camera_label.setAlignment(Qt.AlignCenter)
-        self.camera_label.setMinimumSize(640, 360)
+        self.camera_label.setMinimumSize(320, 180)
         self.camera_label.setSizePolicy(
             QSizePolicy.Ignored,
             QSizePolicy.Ignored,
@@ -156,10 +157,31 @@ class WildlifeWindow(QWidget):
         layout.addWidget(title)
         layout.addWidget(self.position_label)
         layout.addWidget(self.connection_label)
-        layout.addWidget(splitter, stretch=3)
 
         self.detections_panel = DetectionsPanel(self.node)
-        layout.addWidget(self.detections_panel, stretch=1)
+        self.animal_records_panel = AnimalRecordsPanel(self.node)
+
+        self.records_tabs = QTabWidget()
+        self.records_tabs.addTab(
+            self.animal_records_panel,
+            "Animal records",
+        )
+        self.records_tabs.addTab(
+            self.detections_panel,
+            "Latest RGB detections",
+        )
+
+        # Top: map and camera. Bottom: animal tables.
+        self.main_splitter = QSplitter(Qt.Vertical)
+        self.main_splitter.addWidget(splitter)
+        self.main_splitter.addWidget(self.records_tabs)
+        self.main_splitter.setChildrenCollapsible(False)
+
+        self.main_splitter.setStretchFactor(0, 3)
+        self.main_splitter.setStretchFactor(1, 1)
+        self.main_splitter.setSizes([480, 180])
+
+        layout.addWidget(self.main_splitter, stretch=1)
 
         self.resize(1250, 750)
 
@@ -297,6 +319,7 @@ class WildlifeWindow(QWidget):
         self.status_timer.stop()
         self.map_panel.timer.stop()
         self.detections_panel.timer.stop()
+        self.animal_records_panel.stop()
 
     def closeEvent(self, event):
         self.stop_timers()

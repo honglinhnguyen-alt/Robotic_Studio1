@@ -1,6 +1,7 @@
 import math
 import threading
 import time
+import json
 
 import numpy as np
 
@@ -23,6 +24,9 @@ from PyQt5.QtGui import (
     QPolygonF,
 )
 from PyQt5.QtWidgets import QWidget
+from std_msgs.msg import String
+from html import escape
+from PyQt5.QtWidgets import QToolTip
 
 
 def quaternion_yaw(q):
@@ -38,6 +42,8 @@ class MapPanel(QWidget):
 
         self.node = node
         self.robot_frame = "husky1_base_link"
+        self.animal_hit_targets = []
+        self.setMouseTracking(True)        
 
         self.lock = threading.Lock()
         self.pending_map = None
@@ -76,6 +82,17 @@ class MapPanel(QWidget):
         )
 
         # This timer runs on the GUI thread.
+        self.pending_registry = None
+        self.animals = []
+        self.registry_frame = ""
+        self.registry_status = "Animals: waiting for registry..."
+
+        self.registry_sub = node.create_subscription(
+            String,
+            "/husky1/candidates/registry_json",
+            self.receive_registry,
+            map_qos,
+        )        
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(100)
@@ -85,10 +102,79 @@ class MapPanel(QWidget):
         with self.lock:
             self.pending_map = msg
 
+    def receive_registry(self, msg):
+        with self.lock:
+            self.pending_registry = msg.data
+
+    def update_registry(self, text):
+        try:
+            payload = json.loads(text)
+
+            if not isinstance(payload, dict):
+                raise ValueError("Registry must be a JSON object")
+
+            frame = payload.get("frame_id")
+            candidates = payload.get("candidates")
+
+            if not isinstance(frame, str) or not frame.strip():
+                raise ValueError("Missing registry frame")
+
+            if not isinstance(candidates, list):
+                raise ValueError("Candidates must be a list")
+
+            animals = []
+            seen_ids = set()
+
+            for candidate in candidates:
+                identifier = candidate["candidate_id"]
+
+                if (
+                    not isinstance(identifier, str)
+                    or not identifier.strip()
+                    or identifier in seen_ids
+                ):
+                    raise ValueError("Invalid or duplicate candidate ID")
+
+                position = candidate["position"]
+                x = float(position["x"])
+                y = float(position["y"])
+
+                if not math.isfinite(x) or not math.isfinite(y):
+                    raise ValueError("Animal coordinates must be finite")
+
+                class_name = candidate.get("class_name", "unknown")
+                if not isinstance(class_name, str):
+                    raise ValueError("Invalid class name")
+
+                animals.append({
+                    "id": identifier,
+                    "class_name": class_name.strip().lower(),
+                    "x": x,
+                    "y": y,
+                })
+                seen_ids.add(identifier)
+
+            # Replace the snapshot only after validating all records.
+            self.animals = animals
+            self.registry_frame = frame
+            self.registry_status = f"Animal records: {len(animals)}"
+
+        except (ValueError, TypeError, KeyError) as exc:
+            # Keep the previous valid snapshot.
+            self.registry_status = (
+                f"Registry error; keeping previous records: {exc}"
+            )
+
     def refresh(self):
         with self.lock:
             msg = self.pending_map
+            registry_text = self.pending_registry
+
             self.pending_map = None
+            self.pending_registry = None
+
+        if registry_text is not None:
+            self.update_registry(registry_text)
 
         if msg is not None:
             try:
@@ -205,41 +291,87 @@ class MapPanel(QWidget):
             self.status,
         )
 
-        if self.map_image is None:
-            painter.end()
-            return
+        animal_status = self.registry_status
+        self.animal_hit_targets = []
 
-        # Fit the full map inside the panel.
-        area = QRectF(
-            10,
-            65,
-            self.width() - 20,
-            self.height() - 75,
+        if self.map_image is not None:
+            area = QRectF(
+                10,
+                65,
+                self.width() - 20,
+                self.height() - 130,
+            )
+
+            width = self.map_info.width
+            height = self.map_info.height
+
+            scale = min(
+                area.width() / width,
+                area.height() / height,
+            )
+
+            left = area.x() + (area.width() - width * scale) / 2
+            top = area.y() + (area.height() - height * scale) / 2
+
+            target = QRectF(
+                left,
+                top,
+                width * scale,
+                height * scale,
+            )
+
+            painter.drawImage(target, self.map_image)
+
+            animal_status = self.draw_animals(
+                painter, left, top, scale
+            )
+
+            if self.robot_pose is not None:
+                self.draw_robot(painter, left, top, scale)
+
+        painter.setPen(QColor("white"))
+        painter.drawText(
+            QRectF(
+                10,
+                self.height() - 60,
+                self.width() - 20,
+                32,
+            ),
+            Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap,
+            animal_status,
         )
 
-        width = self.map_info.width
-        height = self.map_info.height
+        legend = [
+            ("#22c55e", "Native"),
+            ("#ef4444", "Exotic"),
+            ("#9ca3af", "Unknown"),
+        ]
 
-        scale = min(
-            area.width() / width,
-            area.height() / height,
-        )
+        legend_x = 10
+        legend_y = self.height() - 15
 
-        left = area.x() + (area.width() - width * scale) / 2
-        top = area.y() + (area.height() - height * scale) / 2
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing)
 
-        target = QRectF(
-            left,
-            top,
-            width * scale,
-            height * scale,
-        )
+        for color, label in legend:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(color))
+            painter.drawEllipse(
+                QPointF(legend_x + 5, legend_y),
+                5.0,
+                5.0,
+            )
 
-        painter.drawImage(target, self.map_image)
+            painter.setPen(QColor("white"))
+            painter.drawText(
+                QRectF(legend_x + 15, legend_y - 10, 70, 20),
+                Qt.AlignLeft | Qt.AlignVCenter,
+                label,
+            )
 
-        if self.robot_pose is not None:
-            self.draw_robot(painter, left, top, scale)
+            legend_x += 90
 
+        painter.restore()
         painter.end()
 
     def draw_robot(self, painter, left, top, scale):
@@ -268,7 +400,7 @@ class MapPanel(QWidget):
             painter.setPen(QColor("yellow"))
             painter.drawText(
                 15,
-                self.height() - 15,
+                self.height() - 70,
                 "Robot is outside current map bounds",
             )
             return
@@ -303,3 +435,122 @@ class MapPanel(QWidget):
             ])
         )
         painter.restore()
+
+    def draw_animals(self, painter, left, top, scale):
+        if not self.registry_frame:
+            return self.registry_status
+
+        if self.registry_frame != self.map_frame:
+            return (
+                f"Animals hidden: registry frame "
+                f"{self.registry_frame} != map frame {self.map_frame}"
+            )
+
+        colors = {
+            "kangaroo": "#22c55e",
+            "deer": "#ef4444",
+            "boar": "#ef4444",
+        }
+
+        origin = self.map_info.origin
+        origin_yaw = quaternion_yaw(origin.orientation)
+        cosine = math.cos(origin_yaw)
+        sine = math.sin(origin_yaw)
+        resolution = self.map_info.resolution
+
+        target = QRectF(
+            left,
+            top,
+            self.map_info.width * scale,
+            self.map_info.height * scale,
+        )
+
+        outside_count = 0
+
+        painter.save()
+        painter.setClipRect(target)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        for animal in self.animals:
+            dx = animal["x"] - origin.position.x
+            dy = animal["y"] - origin.position.y
+
+            grid_x = (cosine * dx + sine * dy) / resolution
+            grid_y = (-sine * dx + cosine * dy) / resolution
+
+            if not (
+                0 <= grid_x < self.map_info.width
+                and 0 <= grid_y < self.map_info.height
+            ):
+                outside_count += 1
+                continue
+
+            screen_x = left + grid_x * scale
+            screen_y = (
+                top + (self.map_info.height - grid_y) * scale
+            )
+
+            color = QColor(
+                colors.get(animal["class_name"], "#9ca3af")
+            )
+
+            # Larger marker with a dark outline.
+            painter.setPen(QPen(QColor("#111827"), 2))
+            painter.setBrush(color)
+            painter.drawEllipse(
+                QPointF(screen_x, screen_y),
+                8.0,
+                8.0,
+            )
+
+            self.animal_hit_targets.append(
+                (screen_x, screen_y, animal)
+            )
+
+    
+
+        painter.restore()
+
+        status = self.registry_status
+        if outside_count:
+            status += f" | Outside map: {outside_count}"
+
+        return status  
+    
+    def mouseMoveEvent(self, event):
+        nearest_animal = None
+        nearest_distance = 14.0
+
+        for screen_x, screen_y, animal in self.animal_hit_targets:
+            distance = math.hypot(
+                event.pos().x() - screen_x,
+                event.pos().y() - screen_y,
+            )
+
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_animal = animal
+
+        if nearest_animal is None:
+            QToolTip.hideText()
+        else:
+            animal = nearest_animal
+            identifier = escape(animal["id"])
+            class_name = escape(animal["class_name"])
+
+            QToolTip.showText(
+                event.globalPos(),
+                (
+                    f"<b>{identifier}</b><br>"
+                    f"Class: {class_name}<br>"
+                    f"X: {animal['x']:.2f} m<br>"
+                    f"Y: {animal['y']:.2f} m"
+                ),
+                self,
+            )
+
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        QToolTip.hideText()
+        super().leaveEvent(event)      
