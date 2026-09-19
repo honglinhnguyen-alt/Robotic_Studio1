@@ -7,6 +7,8 @@ from wildlife_spatial.candidate_localizer import bounding_box_indices
 from wildlife_spatial.candidate_localizer import make_camera_point
 from wildlife_spatial.candidate_localizer import make_candidate_marker
 from wildlife_spatial.candidate_localizer import make_localized_detection
+from wildlife_spatial.candidate_localizer import make_projected_detection
+from wildlife_spatial.candidate_localizer import project_thermal_box
 from wildlife_spatial.candidate_localizer import robust_position
 from vision_msgs.msg import Detection2D
 from vision_msgs.msg import ObjectHypothesisWithPose
@@ -123,3 +125,42 @@ def test_localized_detection_preserves_id_and_classification():
     assert localized.bbox.size.x == pytest.approx(0.5)
     assert localized.results[0].hypothesis.class_id == 'kangaroo'
     assert localized.results[0].hypothesis.score == pytest.approx(0.92)
+
+
+def test_thermal_box_projects_to_depth_image_center():
+    projected = project_thermal_box(
+        box=(139.5, 99.5, 179.5, 139.5),
+        thermal_width=320,
+        thermal_height=240,
+        depth_width=720,
+        depth_height=480,
+        thermal_hfov_deg=60.0,
+        depth_hfov_deg=120.0,
+        margin=1.5,
+    )
+
+    center_x = (projected[0] + projected[2]) / 2.0
+    center_y = (projected[1] + projected[3]) / 2.0
+    assert center_x == pytest.approx(359.5)
+    assert center_y == pytest.approx(239.5)
+    assert projected[2] - projected[0] > 0.0
+    assert projected[3] - projected[1] > 0.0
+
+
+def test_projected_thermal_detection_defaults_to_unknown_heat_source():
+    source = Detection2D()
+    source.header.frame_id = 'husky1_thermal_camera_link'
+
+    projected = make_projected_detection(
+        source,
+        'thermal_1',
+        (300.0, 180.0, 420.0, 300.0),
+    )
+
+    assert projected.id == 'thermal_1'
+    assert projected.bbox.center.position.x == pytest.approx(360.0)
+    assert projected.bbox.center.position.y == pytest.approx(240.0)
+    assert projected.bbox.size_x == pytest.approx(120.0)
+    assert projected.bbox.size_y == pytest.approx(120.0)
+    assert projected.results[0].hypothesis.class_id == 'unknown_heat_source'
+    assert projected.results[0].hypothesis.score == pytest.approx(0.0)

@@ -22,6 +22,7 @@ from vision_msgs.msg import ObjectHypothesisWithPose
 
 
 NANOSECONDS_PER_SECOND = 1_000_000_000
+NON_SEMANTIC_CLASSES = {'', 'unknown', 'unknown_heat_source', 'heat_source'}
 
 
 def stamp_nanoseconds(stamp):
@@ -43,9 +44,25 @@ def best_classification(detection):
     )
 
 
+def should_replace_classification(
+    existing_class,
+    existing_confidence,
+    observed_class,
+    observed_confidence,
+):
+    """Prefer an animal label over a generic heat-source label."""
+    existing_is_generic = existing_class in NON_SEMANTIC_CLASSES
+    observed_is_generic = observed_class in NON_SEMANTIC_CLASSES
+    if existing_is_generic and not observed_is_generic:
+        return True
+    if not existing_is_generic and observed_is_generic:
+        return False
+    return observed_confidence >= existing_confidence
+
+
 @dataclass
 class CandidateRecord:
-    """One persistent physical candidate in the map."""
+    """One persistent physical heat-source candidate in the map."""
 
     candidate_id: str
     x: float
@@ -102,7 +119,12 @@ class CandidateRegistryStore:
         record.last_seen_ns = timestamp_ns
         if detection.id:
             record.source_ids.add(detection.id)
-        if confidence >= record.confidence:
+        if should_replace_classification(
+            record.class_name,
+            record.confidence,
+            class_name,
+            confidence,
+        ):
             record.class_name = class_name
             record.confidence = confidence
 
