@@ -1,0 +1,10 @@
+# Portable diffuse + opacity material. White Kd preserves the texture colors.
+newmtl tree_background_01_material
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ns 0.000000
+d 1.000000
+illum 1
+map_Kd ../textures/base_color.png
+map_d ../textures/opacity.png

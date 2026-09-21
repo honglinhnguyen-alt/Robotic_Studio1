@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.8">
+  <model name="lioness_v01">
+    <static>true</static>
+    <link name="lioness_v01_link">
+      <visual name="lioness_v01_part_01_visual">
+        <geometry>
+          <mesh>
+            <uri>model://lioness_v01/meshes/lioness_v01_part_01.obj</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://lioness_v01/textures/lioness_v01_material_01_albedo.png</albedo_map>
+              <metalness>0</metalness>
+              <roughness>.9</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <collision name="body_proxy">
+        <pose>-0.138043 0.000000 0.420000 0.000000 0.000000 0.000000</pose>
+        <geometry>
+          <box>
+            <size>1.242389 0.229795 0.840000</size>
+          </box>
+        </geometry>
+      </collision>
+      <collision name="head_proxy">
+        <pose>0.586684 0.000000 0.670000 0.000000 0.000000 0.000000</pose>
+        <geometry>
+          <box>
+            <size>0.483151 0.169695 0.350000</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

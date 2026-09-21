@@ -1,0 +1,8 @@
+newmtl bear_v01_part_01_material
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+Ns 10
+d 1
+illum 2
+map_Kd ../textures/bear_v01_material_01_albedo.png

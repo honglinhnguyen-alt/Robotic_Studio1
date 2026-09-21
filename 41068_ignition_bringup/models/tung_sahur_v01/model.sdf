@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.8">
+  <model name="tung_sahur_v01">
+    <static>true</static>
+    <link name="tung_sahur_v01_link">
+      <visual name="tung_sahur_v01_part_01_visual">
+        <geometry>
+          <mesh>
+            <uri>model://tung_sahur_v01/meshes/tung_sahur_v01_part_01.obj</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://tung_sahur_v01/textures/tung_sahur_v01_material_01_albedo.png</albedo_map>
+              <metalness>0</metalness>
+              <roughness>.9</roughness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <collision name="body_proxy">
+        <pose>-0.041671 0.000000 0.816000 0.000000 0.000000 0.000000</pose>
+        <geometry>
+          <box>
+            <size>0.541723 0.469672 1.632000</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<sdf version="1.8">
+  <model name="rock_detail_02">
+    <static>true</static>
+    <link name="rock_link">
+      <visual name="rock_visual">
+        <geometry>
+          <mesh>
+            <uri>model://rock_detail_02/meshes/rock_detail_02.obj</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.05 0.05 0.05 1</specular>
+          <pbr><metal>
+            <albedo_map>model://rock_detail_02/textures/rock_detail_02_base_color.png</albedo_map>
+            <normal_map>model://rock_detail_02/textures/rock_detail_02_normal.png</normal_map>
+            <roughness_map>model://rock_detail_02/textures/rock_detail_02_roughness.png</roughness_map>
+            <metalness>0</metalness>
+            <roughness>1</roughness>
+          </metal></pbr>
+        </material>
+      </visual>
+      <collision name="rock_collision">
+        <geometry>
+          <mesh>
+            <uri>model://rock_detail_02/meshes/collision.obj</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>
