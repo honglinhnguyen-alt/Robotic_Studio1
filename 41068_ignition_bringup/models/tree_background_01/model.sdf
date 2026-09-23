@@ -15,6 +15,18 @@
           </metal></pbr>
         </material>
       </visual>
+
+      <collision name="trunk_collision">
+        <pose>-0.02 0.01 1.0 0 0 0</pose>
+
+        <geometry>
+          <cylinder>
+            <radius>0.25</radius>
+            <length>2.0</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
     </link>
   </model>
 </sdf>
