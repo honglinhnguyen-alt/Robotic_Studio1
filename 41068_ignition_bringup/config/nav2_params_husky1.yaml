@@ -155,12 +155,15 @@ controller_server:
       critics:
       - RotateToGoal
       - Oscillation
-      - BaseObstacle
+      # was BaseObstacle: that critic only checks the cell under the robot CENTRE,
+      # so the corners of the rectangular Husky could scrape obstacles.
+      # ObstacleFootprint checks the whole footprint outline.
+      - ObstacleFootprint
       - GoalAlign
       - PathAlign
       - PathDist
       - GoalDist
-      BaseObstacle.scale: 0.02
+      ObstacleFootprint.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
       GoalAlign.scale: 32.0
@@ -183,7 +186,7 @@ local_costmap:
       width: 10
       height: 10
       resolution: 0.05
-      footprint: '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'
+      footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm padding
       plugins:
       - obstacle_layer
       - inflation_layer
@@ -217,7 +220,7 @@ global_costmap:
       global_frame: husky1_map
       robot_base_frame: husky1_base_link
       use_sim_time: true
-      footprint: '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'
+      footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm padding
       resolution: 0.1
       track_unknown_space: true
       plugins:

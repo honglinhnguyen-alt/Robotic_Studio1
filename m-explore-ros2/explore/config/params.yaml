@@ -5,10 +5,28 @@
     costmap_topic: map
     costmap_updates_topic: map_updates
     visualize: true
-    planner_frequency: 0.15
+    # Check every 2 s (was 0.15 Hz = every 6.7 s). The node now COMMITS to its
+    # goal: it only picks a new one when the goal is reached, aborted, timed
+    # out, or the unknown area around it has been seen.
+    planner_frequency: 0.5
     progress_timeout: 30.0
-    potential_scale: 3.0
+    # cost = potential_scale * dist[m] * res  -  gain_scale * n_cells * res
+    # dist is already in metres and gets multiplied by res (0.05) again, so
+    # with 3.0 one metre of distance only weighed 0.15 -> robot chased big
+    # frontiers across the map. 30.0 => 1 m of travel ~ 1.5 m of frontier.
+    potential_scale: 30.0
     orientation_scale: 0.0
     gain_scale: 1.0
     transform_tolerance: 0.3
-    min_frontier_size: 0.75
+    # Ignore small pockets (holes in walls, gaps behind objects) that can never
+    # be observed; they kept exploration from ever finishing.
+    min_frontier_size: 1.0
+
+    # --- added: robustness against getting stuck ---
+    blacklist_radius: 1.0        # [m] (was a fixed 5-cell = 0.25 m box)
+    min_goal_distance: 1.5       # [m] never pick a goal closer than this
+                                 #     (Nav2 xy_goal_tolerance is 1.0 m)
+    goal_clearance: 0.7          # [m] >= Husky circumscribed radius (~0.61 m)
+                                 #     so it can turn on the spot at the goal
+    max_goal_backoff: 2.0        # [m] max distance goal <- frontier cell
+    max_no_goal_cycles: 3        # cycles with no reachable frontier -> done

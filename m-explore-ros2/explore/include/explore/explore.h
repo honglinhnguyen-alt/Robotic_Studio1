@@ -98,12 +98,43 @@ private:
 
   bool goalOnBlacklist(const geometry_msgs::msg::Point& goal);
 
+  /**
+   * @brief Pick a navigation goal for a frontier that Nav2 can actually reach.
+   * @details The frontier centroid is the mean of all frontier cells, so for a
+   * curved / U-shaped frontier (shadow behind a box or tree) it often lies in
+   * unknown space, inside an obstacle or right against it. Instead we take
+   * frontier cells closest to the robot and step back towards the robot until
+   * we find a FREE cell with at least goal_clearance_ metres to the nearest
+   * occupied cell.
+   * @return false if no safe point exists within max_goal_backoff_
+   */
+  bool selectGoal(const frontier_exploration::Frontier& frontier,
+                  const geometry_msgs::msg::Point& robot,
+                  geometry_msgs::msg::Point& goal);
+
+  /**
+   * @brief true if (wx, wy) is a FREE cell and no occupied cell lies within
+   * `clearance` metres of it (checked on the SLAM map used for exploration)
+   */
+  bool hasClearance(double wx, double wy, double clearance);
+
+  /**
+   * @brief true while unknown space is still left around current_goal_, i.e.
+   * it is still worth driving there (used to commit to a goal).
+   */
+  bool goalStillUseful(
+      const std::vector<frontier_exploration::Frontier>& frontiers);
+
+  /** @brief finish exploration: publish EXPLORATION_COMPLETE and stop */
+  void finishExploration(const char* reason);
+
   NavigationGoalHandle::SharedPtr navigation_goal_handle_;
   // void
   // goal_response_callback(std::shared_future<NavigationGoalHandle::SharedPtr>
   // future);
   void reachedGoal(const NavigationGoalHandle::WrappedResult& result,
-                   const geometry_msgs::msg::Point& frontier_goal);
+                   const geometry_msgs::msg::Point& frontier_goal,
+                   const geometry_msgs::msg::Point& frontier_centroid);
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       marker_array_publisher_;
@@ -144,6 +175,22 @@ private:
   bool return_to_init_;
   std::string robot_base_frame_;
   bool resuming_ = false;
+
+  // --- robustness parameters (see config/params.yaml) ---
+  double blacklist_radius_;       // [m] frontiers/goals closer than this to a
+                                  // blacklisted point are skipped
+  double min_goal_distance_;      // [m] never pick a goal closer than this
+                                  // to the robot (> xy_goal_tolerance)
+  double goal_clearance_;         // [m] min distance from goal to obstacles
+  double max_goal_backoff_;       // [m] how far we may back off from the
+                                  // frontier towards the robot
+  int max_no_goal_cycles_;        // cycles without any reachable frontier
+                                  // before declaring exploration complete
+  int no_goal_cycles_ = 0;
+
+  geometry_msgs::msg::Point current_goal_;      // goal last sent to Nav2
+  geometry_msgs::msg::Point current_centroid_;  // centroid of its frontier
+  bool has_goal_ = false;
   bool goal_active_{false};
   rclcpp_action::GoalUUID active_goal_id_;
 };
