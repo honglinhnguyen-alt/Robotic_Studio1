@@ -124,7 +124,22 @@ controller_server:
       xy_goal_tolerance: 1.0
       yaw_goal_tolerance: 1.57
     FollowPath:
-      plugin: dwb_core::DWBLocalPlanner
+      # RotationShim (official Nav2 plugin) wrapped around the SAME DWB as before:
+      # when a new path arrives (new frontier, or a re-plan that changes direction)
+      # and the robot heading is off by more than angular_dist_threshold, the robot
+      # stops and turns ON THE SPOT (full-footprint collision check) until it lines
+      # up with the NavFn path, then DWB drives exactly as in v3.
+      # If turning on the spot would hit something, the shim hands over to DWB.
+      plugin: nav2_rotation_shim_controller::RotationShimController
+      primary_controller: dwb_core::DWBLocalPlanner
+      angular_dist_threshold: 0.5         # [rad] ~29 deg: heading error that triggers turning on the spot
+      angular_disengage_threshold: 0.1    # [rad] ~6 deg: keep turning until this close (Humble >= 1.1.17)
+      forward_sampling_distance: 0.7      # [m] path direction measured 0.7 m along the new path
+      rotate_to_heading_angular_vel: 0.8  # [rad/s]
+      max_angular_accel: 3.2              # [rad/s^2]
+      simulate_ahead_time: 1.0            # [s] collision check of the turn
+      rotate_to_goal_heading: false       # DWB handles the final heading as before
+      # ---- DWB parameters (unchanged from v3) ----
       debug_trajectory_details: false
       min_vel_x: 0.0
       min_vel_y: 0.0
@@ -221,6 +236,8 @@ global_costmap:
       robot_base_frame: husky1_base_link
       use_sim_time: true
       footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm padding
+      # global paths keep 5 cm more clearance from trees than the robot footprint
+      footprint_padding: 0.05
       resolution: 0.1
       track_unknown_space: true
       plugins:
