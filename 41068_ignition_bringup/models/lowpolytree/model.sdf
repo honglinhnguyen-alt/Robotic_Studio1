@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<sdf version="1.8">
+  <model name="lowpolytree">
+    <static>true</static>
+
+    <link name="tree_link">
+      <visual name="tree_visual">
+        <pose>0 0 0 1.570796 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://lowpolytree/meshes/LowPolyTrees.obj</uri>
+            <scale>4 4 4</scale>
+          </mesh>
+        </geometry>
+
+        <plugin
+          filename="ignition-gazebo-thermal-system"
+          name="gz::sim::systems::Thermal">
+          <temperature>300.15</temperature>
+        </plugin>
+      </visual>
+
+      <!-- Example only: adjust to the actual trunk dimensions. -->
+      <collision name="trunk_collision">
+        <pose>0 0 1.5 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.2</radius>
+            <length>3.0</length>
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

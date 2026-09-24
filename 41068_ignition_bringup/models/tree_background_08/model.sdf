@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<sdf version="1.8">
+  <model name="tree_background_08">
+    <static>true</static>
+    <link name="tree_link">
+      <visual name="tree_visual">
+        <geometry><mesh><uri>model://tree_background_08/meshes/tree_background_08.obj</uri><scale>0.6 0.6 0.3</scale></mesh></geometry>
+        <material>
+          <ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+          <double_sided>true</double_sided>
+          <pbr><metal>
+            <albedo_map>model://tree_background_08/textures/base_color.png</albedo_map>
+            <metalness>0</metalness><roughness>0.9</roughness>
+          </metal></pbr>
+        </material>
+      </visual>
+
+      <collision name="trunk_collision">
+        <pose>-0.035 0.03 1.0 0 0 0</pose>
+
+        <geometry>
+          <cylinder>
+            <radius>0.34</radius>
+            <length>2.0</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+    </link>
+  </model>
+</sdf>

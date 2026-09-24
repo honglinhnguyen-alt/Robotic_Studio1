@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-"""Localize fused animal detections with depth point clouds for R2."""
+"""Localize thermal heat detections with depth point clouds for R2."""
 
 from collections import deque
+from math import atan
 from math import ceil
 from math import floor
+from math import radians
+from math import tan
 import zlib
 
 import numpy as np
@@ -24,12 +27,149 @@ from tf2_ros import Buffer
 from tf2_ros import TransformException
 from tf2_ros import TransformListener
 from visualization_msgs.msg import Marker
+from vision_msgs.msg import Detection2D
 from vision_msgs.msg import Detection2DArray
 from vision_msgs.msg import Detection3D
 from vision_msgs.msg import Detection3DArray
+from vision_msgs.msg import ObjectHypothesisWithPose
 
 
 NANOSECONDS_PER_SECOND = 1_000_000_000
+
+
+def detection_box(detection):
+    """Return a Detection2D box as x1, y1, x2, y2 coordinates."""
+    center = detection.bbox.center
+    if hasattr(center, 'position'):
+        center_x = center.position.x
+        center_y = center.position.y
+    else:
+        center_x = center.x
+        center_y = center.y
+    half_width = float(detection.bbox.size_x) / 2.0
+    half_height = float(detection.bbox.size_y) / 2.0
+    return (
+        float(center_x) - half_width,
+        float(center_y) - half_height,
+        float(center_x) + half_width,
+        float(center_y) + half_height,
+    )
+
+
+def _vertical_fov(horizontal_fov, width, height):
+    """Derive vertical field of view for square image pixels."""
+    return 2.0 * atan(tan(horizontal_fov / 2.0) * height / width)
+
+
+def _project_axis(
+    coordinate,
+    source_size,
+    source_fov,
+    destination_size,
+    destination_fov,
+):
+    """Project one pixel coordinate between aligned pinhole cameras."""
+    normalized = 2.0 * float(coordinate) / (source_size - 1) - 1.0
+    ray_tangent = normalized * tan(source_fov / 2.0)
+    destination_normalized = ray_tangent / tan(destination_fov / 2.0)
+    return (
+        (destination_normalized + 1.0)
+        * (destination_size - 1)
+        / 2.0
+    )
+
+
+def project_thermal_box(
+    box,
+    thermal_width,
+    thermal_height,
+    depth_width,
+    depth_height,
+    thermal_hfov_deg,
+    depth_hfov_deg,
+    margin=1.5,
+    offset_x=0.0,
+    offset_y=0.0,
+):
+    """Project a thermal pixel box into the aligned RGB-D image."""
+    if min(thermal_width, thermal_height, depth_width, depth_height) <= 1:
+        raise ValueError('camera image dimensions must exceed one pixel')
+    if thermal_hfov_deg <= 0.0 or depth_hfov_deg <= 0.0:
+        raise ValueError('camera fields of view must be positive')
+    if margin <= 0.0:
+        raise ValueError('thermal projection margin must be positive')
+
+    thermal_hfov = radians(float(thermal_hfov_deg))
+    depth_hfov = radians(float(depth_hfov_deg))
+    thermal_vfov = _vertical_fov(
+        thermal_hfov,
+        thermal_width,
+        thermal_height,
+    )
+    depth_vfov = _vertical_fov(
+        depth_hfov,
+        depth_width,
+        depth_height,
+    )
+    x1, y1, x2, y2 = box
+    projected = (
+        _project_axis(
+            x1, thermal_width, thermal_hfov, depth_width, depth_hfov
+        ),
+        _project_axis(
+            y1, thermal_height, thermal_vfov, depth_height, depth_vfov
+        ),
+        _project_axis(
+            x2, thermal_width, thermal_hfov, depth_width, depth_hfov
+        ),
+        _project_axis(
+            y2, thermal_height, thermal_vfov, depth_height, depth_vfov
+        ),
+    )
+    projected_x1, projected_y1, projected_x2, projected_y2 = projected
+    center_x = (projected_x1 + projected_x2) / 2.0 + float(offset_x)
+    center_y = (projected_y1 + projected_y2) / 2.0 + float(offset_y)
+    half_width = abs(projected_x2 - projected_x1) * margin / 2.0
+    half_height = abs(projected_y2 - projected_y1) * margin / 2.0
+    return (
+        max(0.0, center_x - half_width),
+        max(0.0, center_y - half_height),
+        min(float(depth_width - 1), center_x + half_width),
+        min(float(depth_height - 1), center_y + half_height),
+    )
+
+
+def make_projected_detection(
+    source,
+    identifier,
+    projected_box,
+    classification_results=None,
+):
+    """Create a depth-image detection from one thermal candidate."""
+    x1, y1, x2, y2 = projected_box
+    detection = Detection2D()
+    detection.header = source.header
+    detection.id = identifier
+    center = detection.bbox.center
+    if hasattr(center, 'position'):
+        center.position.x = (x1 + x2) / 2.0
+        center.position.y = (y1 + y2) / 2.0
+        center.theta = 0.0
+    else:
+        center.x = (x1 + x2) / 2.0
+        center.y = (y1 + y2) / 2.0
+        center.theta = 0.0
+    detection.bbox.size_x = max(0.0, x2 - x1)
+    detection.bbox.size_y = max(0.0, y2 - y1)
+
+    if classification_results:
+        detection.results = classification_results
+    else:
+        result = ObjectHypothesisWithPose()
+        result.hypothesis.class_id = 'unknown_heat_source'
+        result.hypothesis.score = 0.0
+        detection.results.append(result)
+    return detection
 
 
 def stamp_nanoseconds(stamp):
@@ -220,13 +360,17 @@ def make_localized_detection(source_detection, point, spread):
 
 
 class CandidateLocalizer(Node):
-    """Verify that the spatial pipeline receives detections and depth data."""
+    """Localize each thermal trigger and attach optional YOLO metadata."""
 
     def __init__(self):
         super().__init__('candidate_localizer')
 
         self.declare_parameter(
             'detection_topic',
+            '/husky1/perception/thermal/detections',
+        )
+        self.declare_parameter(
+            'classification_topic',
             '/husky1/perception/thermal_yolo/detections',
         )
         self.declare_parameter(
@@ -240,6 +384,14 @@ class CandidateLocalizer(Node):
         self.declare_parameter('minimum_range', 0.2)
         self.declare_parameter('maximum_range', 20.0)
         self.declare_parameter('minimum_valid_points', 20)
+        self.declare_parameter('thermal_image_width', 320)
+        self.declare_parameter('thermal_image_height', 240)
+        self.declare_parameter('thermal_hfov_deg', 60.0)
+        self.declare_parameter('depth_hfov_deg', 120.0)
+        self.declare_parameter('thermal_projection_margin', 1.5)
+        self.declare_parameter('thermal_depth_offset_x_px', 0.0)
+        self.declare_parameter('thermal_depth_offset_y_px', 0.0)
+        self.declare_parameter('classification_max_age', 10.0)
         self.declare_parameter('map_frame', 'husky1_map')
         self.declare_parameter(
             'localized_point_topic',
@@ -256,6 +408,9 @@ class CandidateLocalizer(Node):
         self.declare_parameter('transform_timeout', 0.25)
 
         detection_topic = str(self.get_parameter('detection_topic').value)
+        classification_topic = str(
+            self.get_parameter('classification_topic').value
+        )
         point_cloud_topic = str(self.get_parameter('point_cloud_topic').value)
         self._cloud_buffer_seconds = float(
             self.get_parameter('cloud_buffer_seconds').value
@@ -271,6 +426,30 @@ class CandidateLocalizer(Node):
         self._maximum_range = float(self.get_parameter('maximum_range').value)
         self._minimum_valid_points = int(
             self.get_parameter('minimum_valid_points').value
+        )
+        self._thermal_image_width = int(
+            self.get_parameter('thermal_image_width').value
+        )
+        self._thermal_image_height = int(
+            self.get_parameter('thermal_image_height').value
+        )
+        self._thermal_hfov_deg = float(
+            self.get_parameter('thermal_hfov_deg').value
+        )
+        self._depth_hfov_deg = float(
+            self.get_parameter('depth_hfov_deg').value
+        )
+        self._thermal_projection_margin = float(
+            self.get_parameter('thermal_projection_margin').value
+        )
+        self._thermal_depth_offset_x_px = float(
+            self.get_parameter('thermal_depth_offset_x_px').value
+        )
+        self._thermal_depth_offset_y_px = float(
+            self.get_parameter('thermal_depth_offset_y_px').value
+        )
+        self._classification_max_age = float(
+            self.get_parameter('classification_max_age').value
         )
         self._map_frame = str(self.get_parameter('map_frame').value)
         localized_point_topic = str(
@@ -300,6 +479,16 @@ class CandidateLocalizer(Node):
             )
         if self._minimum_valid_points < 1:
             raise ValueError('minimum_valid_points must be at least one')
+        if self._thermal_image_width <= 1 or self._thermal_image_height <= 1:
+            raise ValueError('thermal image dimensions must exceed one pixel')
+        if self._thermal_hfov_deg <= 0.0 or self._depth_hfov_deg <= 0.0:
+            raise ValueError('camera fields of view must be positive')
+        if self._thermal_projection_margin <= 0.0:
+            raise ValueError(
+                'thermal_projection_margin must be greater than zero'
+            )
+        if self._classification_max_age < 0.0:
+            raise ValueError('classification_max_age must be nonnegative')
         if not self._map_frame:
             raise ValueError('map_frame cannot be empty')
         if self._transform_timeout < 0.0:
@@ -307,6 +496,8 @@ class CandidateLocalizer(Node):
 
         self._first_cloud_received = False
         self._cloud_buffer = deque()
+        self._active_thermal_ids = set()
+        self._classification_cache = {}
         self._tf_buffer = Buffer(
             cache_time=Duration(
                 seconds=max(10.0, self._cloud_buffer_seconds + 2.0)
@@ -339,6 +530,12 @@ class CandidateLocalizer(Node):
             self._detection_callback,
             qos_profile_sensor_data,
         )
+        self._classification_sub = self.create_subscription(
+            Detection2DArray,
+            classification_topic,
+            self._classification_callback,
+            qos_profile_sensor_data,
+        )
         self._cloud_sub = self.create_subscription(
             PointCloud2,
             point_cloud_topic,
@@ -347,7 +544,12 @@ class CandidateLocalizer(Node):
         )
 
         self.get_logger().info('Candidate localizer started')
-        self.get_logger().info(f'Detections: {detection_topic}')
+        self.get_logger().info(
+            f'Thermal trigger detections: {detection_topic}'
+        )
+        self.get_logger().info(
+            f'Optional YOLO classifications: {classification_topic}'
+        )
         self.get_logger().info(f'Point cloud: {point_cloud_topic}')
         self.get_logger().info(
             f'Localized points: {localized_point_topic}; '
@@ -368,6 +570,13 @@ class CandidateLocalizer(Node):
             f'range=[{self._minimum_range:.1f}, '
             f'{self._maximum_range:.1f}] m, '
             f'minimum points={self._minimum_valid_points}'
+        )
+        self.get_logger().info(
+            'Thermal projection: '
+            f'{self._thermal_image_width}x{self._thermal_image_height}, '
+            f'thermal HFOV={self._thermal_hfov_deg:.1f} deg, '
+            f'depth HFOV={self._depth_hfov_deg:.1f} deg, '
+            f'margin={self._thermal_projection_margin:.2f}'
         )
 
     @staticmethod
@@ -417,13 +626,66 @@ class CandidateLocalizer(Node):
         ):
             self._cloud_buffer.popleft()
 
+    @staticmethod
+    def _thermal_identifier(detection, index):
+        """Return the identifier shared by thermal and YOLO detections."""
+        return detection.id or f'thermal_{index + 1}'
+
+    def _classification_callback(self, message):
+        """Cache optional YOLO labels without triggering localization."""
+        timestamp_ns = stamp_nanoseconds(message.header.stamp)
+        for index, detection in enumerate(message.detections):
+            identifier = self._thermal_identifier(detection, index)
+            if identifier not in self._active_thermal_ids:
+                continue
+            if not detection.results:
+                continue
+
+            self._classification_cache[identifier] = (
+                timestamp_ns,
+                list(detection.results),
+            )
+            best = max(
+                detection.results,
+                key=lambda result: result.hypothesis.score,
+            )
+            self.get_logger().info(
+                f'Cached YOLO classification for {identifier}: '
+                f'{best.hypothesis.class_id} '
+                f'{best.hypothesis.score:.2f}'
+            )
+
+    def _classification_results(self, identifier, thermal_stamp):
+        """Return a fresh cached YOLO result for one thermal candidate."""
+        cached = self._classification_cache.get(identifier)
+        if cached is None:
+            return None
+
+        classification_stamp_ns, results = cached
+        thermal_stamp_ns = stamp_nanoseconds(thermal_stamp)
+        age = abs(thermal_stamp_ns - classification_stamp_ns)
+        age_seconds = age / NANOSECONDS_PER_SECOND
+        if age_seconds > self._classification_max_age:
+            self._classification_cache.pop(identifier, None)
+            return None
+        return results
+
     def _detection_callback(self, message):
         self.get_logger().info(
-            'Detection message received: '
+            'Thermal detection message received: '
             f'frame={message.header.frame_id}, '
             f'time={self._stamp_seconds(message.header.stamp):.3f}, '
             f'count={len(message.detections)}'
         )
+
+        active_ids = {
+            self._thermal_identifier(detection, index)
+            for index, detection in enumerate(message.detections)
+        }
+        self._active_thermal_ids = active_ids
+        for identifier in tuple(self._classification_cache):
+            if identifier not in active_ids:
+                self._classification_cache.pop(identifier, None)
 
         for index, detection in enumerate(message.detections):
             center = detection.bbox.center
@@ -435,8 +697,8 @@ class CandidateLocalizer(Node):
                 center_y = center.y
 
             self.get_logger().info(
-                f'Detection {index}: '
-                f'id={detection.id}, '
+                f'Thermal detection {index}: '
+                f'id={self._thermal_identifier(detection, index)}, '
                 f'centre=({center_x:.1f}, {center_y:.1f}), '
                 f'size=({detection.bbox.size_x:.1f}, '
                 f'{detection.bbox.size_y:.1f})'
@@ -477,12 +739,58 @@ class CandidateLocalizer(Node):
         localized_message.header.frame_id = self._map_frame
 
         for index, detection in enumerate(message.detections):
-            identifier = detection.id or f'detection_{index}'
+            identifier = self._thermal_identifier(detection, index)
+            try:
+                projected_box = project_thermal_box(
+                    detection_box(detection),
+                    self._thermal_image_width,
+                    self._thermal_image_height,
+                    cloud.width,
+                    cloud.height,
+                    self._thermal_hfov_deg,
+                    self._depth_hfov_deg,
+                    self._thermal_projection_margin,
+                    self._thermal_depth_offset_x_px,
+                    self._thermal_depth_offset_y_px,
+                )
+            except ValueError as error:
+                self.get_logger().warning(
+                    f'Cannot project {identifier}: {error}'
+                )
+                continue
+
+            classification_results = self._classification_results(
+                identifier,
+                message.header.stamp,
+            )
+            projected_detection = make_projected_detection(
+                detection,
+                identifier,
+                projected_box,
+                classification_results,
+            )
+            projected_center = projected_detection.bbox.center
+            if hasattr(projected_center, 'position'):
+                projected_center_x = projected_center.position.x
+                projected_center_y = projected_center.position.y
+            else:
+                projected_center_x = projected_center.x
+                projected_center_y = projected_center.y
+            classification = projected_detection.results[0].hypothesis
+            self.get_logger().info(
+                f'Projected {identifier} into depth image: '
+                f'centre=({projected_center_x:.1f}, '
+                f'{projected_center_y:.1f}), '
+                f'size=({projected_detection.bbox.size_x:.1f}, '
+                f'{projected_detection.bbox.size_y:.1f}), '
+                f'class={classification.class_id} '
+                f'{classification.score:.2f}'
+            )
             try:
                 position, spread, valid_count, sampled_count = (
                     extract_position_from_cloud(
                         cloud,
-                        detection,
+                        projected_detection,
                         self._bbox_inner_fraction,
                         self._pixel_stride,
                         self._minimum_range,
@@ -527,7 +835,11 @@ class CandidateLocalizer(Node):
                 make_candidate_marker(map_point, identifier, spread)
             )
             localized_message.detections.append(
-                make_localized_detection(detection, map_point, spread)
+                make_localized_detection(
+                    projected_detection,
+                    map_point,
+                    spread,
+                )
             )
             self.get_logger().info(
                 f'Map-frame estimate for {identifier}: '

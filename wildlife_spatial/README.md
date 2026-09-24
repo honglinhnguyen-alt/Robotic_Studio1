@@ -1,15 +1,18 @@
 # Wildlife Spatial
 
 `wildlife_spatial` is the ROS 2 Humble package for the R2 **Candidate
-Localization and Evaluation** role. It turns an R1 image detection into a map
-position, remembers physical candidates without repeatedly counting the same
-animal, and compares the results with R5 simulation ground truth.
+Localization and Evaluation** role. It turns an R1 thermal heat detection into
+a map position, remembers physical candidates without repeatedly counting the
+same heat source, and compares the results with R5 simulation ground truth.
+Localization does not depend on YOLO recognizing an animal. YOLO
+classification is optional metadata that can be added to an already localized
+candidate.
 
 The package contains three executable nodes:
 
 | Executable | Purpose |
 |---|---|
-| `candidate_localizer` | Combines a 2D detection with the depth point cloud and TF to estimate a 3D position in `husky1_map`. |
+| `candidate_localizer` | Projects a thermal heat box into the depth image, then combines it with the point cloud and TF to estimate a 3D position in `husky1_map`. |
 | `candidate_registry` | Assigns stable candidate IDs and merges repeated observations using map distance. |
 | `spatial_evaluator` | Compares registry estimates with ground truth and writes metrics to CSV and JSON. |
 
@@ -22,7 +25,8 @@ the R4-to-R2 state-update interface is still to be integrated.
 
 ```mermaid
 flowchart LR
-    R1["R1 fused thermal + YOLO detections"]
+    T["R1 thermal heat detections"]
+    Y["Optional R1 YOLO classifications"]
     PC["Depth point cloud"]
     TF["Husky TF tree"]
     L["candidate_localizer"]
@@ -31,7 +35,8 @@ flowchart LR
     E["spatial_evaluator"]
     UI["R4 / R5 UI"]
 
-    R1 -->|Detection2DArray| L
+    T -->|triggers localization| L
+    Y -.->|optional class metadata| L
     PC -->|PointCloud2| L
     TF --> L
     L -->|Detection3DArray| R
@@ -45,22 +50,33 @@ flowchart LR
 
 ### 1. Candidate localizer
 
-The localizer subscribes to R1's fused thermal/YOLO detections and the
-organized RGB-D point cloud.
+The localizer subscribes to R1's raw thermal detections, optional fused
+thermal/YOLO detections, and the organized RGB-D point cloud. Only a message on
+`/husky1/perception/thermal/detections` can trigger localization. A YOLO message
+is cached as optional class metadata and never starts localization by itself.
 
-For each detection it:
+For each thermal heat detection it:
 
 1. Finds the buffered point cloud with the nearest timestamp.
 2. Rejects the detection if the time difference is greater than `0.5 s` by
    default.
-3. Samples XYZ points from the inner part of the 2D bounding box. Using the
+3. Projects the 320x240 thermal bounding box into the 720x480 RGB-D image using
+   the cameras' fields of view. A configurable margin allows for the small
+   difference between the thermal and RGB camera positions.
+4. Samples XYZ points from the inner part of the projected box. Using the
    inner region reduces background points near the box edges.
-4. Removes NaN, infinite, too-near, and too-far samples.
-5. Uses the coordinate-wise median as a robust camera-frame position.
-6. Looks up the timestamped transform from `husky1_camera_link` to
+5. Removes NaN, infinite, too-near, and too-far samples.
+6. Uses the coordinate-wise median as a robust camera-frame position.
+7. Looks up the timestamped transform from `husky1_camera_link` to
    `husky1_map`.
-7. Publishes the map point, a debug marker, and a localized
+8. Publishes the map point, a debug marker, and a localized
    `Detection3DArray` for the registry.
+
+If no fresh YOLO result exists, the output class is
+`unknown_heat_source` with confidence `0.0`. The candidate is still localized,
+published, and stored in the registry. If YOLO later recognizes it, a later
+thermal observation can upgrade the same nearby registry record to the animal
+class.
 
 The median spread of the valid depth samples is also calculated. It controls
 the size of the debug sphere and indicates how dispersed the sampled surface
@@ -70,7 +86,8 @@ points are.
 
 | Direction | Topic | Message type | Meaning |
 |---|---|---|---|
-| Input | `/husky1/perception/thermal_yolo/detections` | `vision_msgs/msg/Detection2DArray` | Classified R1 detections with image bounding boxes. |
+| Input, trigger | `/husky1/perception/thermal/detections` | `vision_msgs/msg/Detection2DArray` | Raw heat-source boxes; each nonempty message starts localization. |
+| Input, optional | `/husky1/perception/thermal_yolo/detections` | `vision_msgs/msg/Detection2DArray` | YOLO classes cached for active thermal candidates; does not trigger localization. |
 | Input | `/husky1/camera/depth/points` | `sensor_msgs/msg/PointCloud2` | Organized point cloud aligned with the RGB image. |
 | Input | `/husky1/tf`, `/husky1/tf_static` | TF messages | Transform from the camera to the map. |
 | Output | `/husky1/candidates/localized_point` | `geometry_msgs/msg/PointStamped` | Individual map-frame position, useful for debugging. |
@@ -81,7 +98,8 @@ points are.
 
 | Parameter | Default | Meaning |
 |---|---:|---|
-| `detection_topic` | `/husky1/perception/thermal_yolo/detections` | Fused R1 detection input. |
+| `detection_topic` | `/husky1/perception/thermal/detections` | Raw thermal input that triggers localization. |
+| `classification_topic` | `/husky1/perception/thermal_yolo/detections` | Optional YOLO class input. |
 | `point_cloud_topic` | `/husky1/camera/depth/points` | Organized depth cloud input. |
 | `cloud_buffer_seconds` | `5.0` | Amount of point-cloud history retained. |
 | `max_cloud_time_difference` | `0.5` | Maximum accepted detection/cloud time difference in seconds. |
@@ -90,6 +108,14 @@ points are.
 | `minimum_range` | `0.2` | Minimum accepted point range in metres. |
 | `maximum_range` | `20.0` | Maximum accepted point range in metres. |
 | `minimum_valid_points` | `20` | Samples required to produce an estimate. |
+| `thermal_image_width` | `320` | Thermal image width used for projection. |
+| `thermal_image_height` | `240` | Thermal image height used for projection. |
+| `thermal_hfov_deg` | `60.0` | Thermal camera horizontal field of view. |
+| `depth_hfov_deg` | `120.0` | RGB-D camera horizontal field of view. |
+| `thermal_projection_margin` | `1.5` | Scale applied to the projected box before depth sampling. |
+| `thermal_depth_offset_x_px` | `0.0` | Optional horizontal projection calibration in depth pixels. |
+| `thermal_depth_offset_y_px` | `0.0` | Optional vertical projection calibration in depth pixels. |
+| `classification_max_age` | `10.0` | Maximum age in seconds of cached YOLO metadata. |
 | `map_frame` | `husky1_map` | Output coordinate frame. |
 | `localized_point_topic` | `/husky1/candidates/localized_point` | Debug point output. |
 | `localized_detections_topic` | `/husky1/candidates/localized_detections` | Registry input. |
@@ -106,7 +132,9 @@ map distance.
   merged into that record.
 - Otherwise, the registry creates `candidate_1`, `candidate_2`, and so on.
 - A merged record uses a running average of all observed XYZ positions.
-- The highest-confidence classification seen for the candidate is retained.
+- An animal class replaces `unknown_heat_source` when one becomes available.
+- A later unknown observation cannot erase a known animal class. Between two
+  animal classes, the higher-confidence classification is retained.
 - The record stores its source IDs, first and last timestamps, and observation
   count.
 
@@ -283,9 +311,10 @@ ros2 run wildlife_spatial candidate_localizer \
 The TF remappings are required because this simulation publishes the Husky TF
 tree on `/husky1/tf` and `/husky1/tf_static`.
 
-A successful estimate looks like:
+A successful estimate without a YOLO classification looks like:
 
 ```text
+Projected thermal_1 into depth image: ... class=unknown_heat_source 0.00
 Camera-frame estimate for thermal_1: position=(2.712, -0.278, 0.309) m ...
 Map-frame estimate for thermal_1: position=(4.024, 6.909, 0.559) m, frame=husky1_map
 ```
@@ -306,10 +335,10 @@ ros2 run wildlife_spatial candidate_registry \
   -p merge_distance:=1.0
 ```
 
-Expected output for repeated observations of one animal:
+Expected output when thermal localization succeeds before YOLO:
 
 ```text
-Created candidate_1 at (4.024, 6.909, 0.559) m; class=kangaroo 0.92
+Created candidate_1 at (4.024, 6.909, 0.559) m; class=unknown_heat_source 0.00
 Merged observation into candidate_1: distance=0.000 m, observations=2, class=kangaroo 0.92
 ```
 
@@ -362,6 +391,7 @@ running:
 ```bash
 ros2 topic type /husky1/camera/depth/points
 ros2 topic echo /husky1/camera/depth/points --once --no-arr
+ros2 topic echo /husky1/perception/thermal/detections --once --no-arr
 ros2 topic echo /husky1/perception/thermal_yolo/detections --once --no-arr
 
 ros2 run tf2_ros tf2_echo \
@@ -470,7 +500,7 @@ python3 -m pytest -q \
   test/test_spatial_evaluator.py
 ```
 
-The functional suite currently contains 17 tests.
+The functional suite currently contains 21 tests.
 
 ## Ground-truth JSON format
 

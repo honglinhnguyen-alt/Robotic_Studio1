@@ -66,6 +66,38 @@ def test_lower_confidence_observation_does_not_replace_classification():
     assert record.source_ids == {'thermal_1', 'thermal_7'}
 
 
+def test_yolo_label_replaces_unknown_heat_source():
+    store = CandidateRegistryStore(merge_distance=1.0)
+    thermal = make_detection(
+        1.0, 1.0, 0.0, 'thermal_1', 'unknown_heat_source', 0.0
+    )
+    classified = make_detection(
+        1.1, 1.0, 0.0, 'thermal_1', 'kangaroo', 0.72
+    )
+
+    store.update(thermal, Time(sec=1))
+    record, _, _ = store.update(classified, Time(sec=2))
+
+    assert record.class_name == 'kangaroo'
+    assert record.confidence == pytest.approx(0.72)
+
+
+def test_unknown_heat_source_does_not_erase_yolo_label():
+    store = CandidateRegistryStore(merge_distance=1.0)
+    classified = make_detection(
+        1.0, 1.0, 0.0, 'thermal_1', 'kangaroo', 0.72
+    )
+    thermal = make_detection(
+        1.1, 1.0, 0.0, 'thermal_1', 'unknown_heat_source', 0.0
+    )
+
+    store.update(classified, Time(sec=1))
+    record, _, _ = store.update(thermal, Time(sec=2))
+
+    assert record.class_name == 'kangaroo'
+    assert record.confidence == pytest.approx(0.72)
+
+
 def test_registry_payload_contains_mission_fields():
     store = CandidateRegistryStore(merge_distance=1.0)
     detection = make_detection(

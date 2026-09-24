@@ -1,0 +1,9 @@
+# Relative texture paths. Normal and roughness maps are configured in SDF.
+newmtl rock_cliff_02_stone_material
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.05 0.05 0.05
+Ns 12
+d 1
+illum 2
+map_Kd ../textures/rock_cliff_02_base_color.png

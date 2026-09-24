@@ -8,6 +8,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import Point
 from std_msgs.msg import String, Bool
 from std_srvs.srv import Trigger
+from rclpy.qos import QoSProfile, DurabilityPolicy
+from explore_lite_msgs.msg import ExploreStatus
 
 
 
@@ -56,6 +58,14 @@ class MissionNode(Node):
 
 
         self.result_sub = self.create_subscription(String, 'Yolo_result', self.result_callback, 10)
+
+        # Exploration status from explore_lite. The publisher is transient_local,
+        # so we also receive the last status if we start after it was sent.
+        self.exploration_complete = False
+        self.exploration_status = 'unknown'
+        explore_qos = QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.explore_status_sub = self.create_subscription(
+            ExploreStatus, '/husky1/explore/status', self._explore_status_callback, explore_qos)
 
         # ------------- Publisher --------------------------------------------------------------------------------------------
 
@@ -120,6 +130,13 @@ class MissionNode(Node):
 
 
             candidate_id = self._get_next_candidate()
+
+            # explore_lite reported that no reachable frontier is left and
+            # there is nothing left to investigate -> mission complete
+            if candidate_id is None and self.exploration_complete:
+                self.get_logger().info('Exploration complete and no candidate pending: mission COMPLETE.')
+                self.state = MissionState.COMPLETE
+                return
 
             if candidate_id is not None:
 
@@ -325,6 +342,19 @@ class MissionNode(Node):
     #======================================================================
 
 
+    def _explore_status_callback(self, msg: ExploreStatus):
+
+        if msg.status != self.exploration_status:
+            self.get_logger().info(f'Exploration status: {msg.status}')
+        self.exploration_status = msg.status
+
+        if msg.status == ExploreStatus.EXPLORATION_COMPLETE:
+            self.exploration_complete = True
+        elif msg.status in (ExploreStatus.EXPLORATION_STARTED,
+                            ExploreStatus.EXPLORATION_IN_PROGRESS):
+            self.exploration_complete = False
+
+
     def _resume_exploration(self):
 
         msg = Bool()
@@ -376,6 +406,7 @@ class MissionNode(Node):
 
         msg.data = (
             f'robot_state={self.state.name};'
+            f'exploration={self.exploration_status};'
             f'exotic_count={exotic_count};'
             f'native_count={native_count};'
             f'candidates={"|".join(candidate_text)}'

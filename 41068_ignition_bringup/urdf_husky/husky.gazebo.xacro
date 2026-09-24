@@ -194,7 +194,8 @@
 
       <topic>model/${gz_model_name}/scan</topic>
 
-      <update_rate>10</update_rate> <!-- was 3 -->
+      <!-- was 3 Hz: at 0.5-1 m/s the costmap saw obstacles 17-33 cm late -->
+      <update_rate>10</update_rate>
 
       <gz_frame_id>${prefix}base_scan</gz_frame_id>
 

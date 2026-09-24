@@ -1,0 +1,21 @@
+newmtl Bark
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.100000 0.100000 0.100000
+Ke 0.000000 0.000000 0.000000
+Ns 10.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ../textures/bark_brown_02_diff_1k.jpeg
+
+newmtl Leaf
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.100000 0.100000 0.100000
+Ke 0.000000 0.000000 0.000000
+Ns 10.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ../textures/Ivy_branch_Variation_1_Diffuse-Ivy_branch_Variation_1_Opacit.png
