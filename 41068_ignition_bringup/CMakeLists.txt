@@ -23,6 +23,7 @@ install(
     scripts/animal_yolo_detector.py
     scripts/thermal_candidate_detector.py
     scripts/obstacle_avoidance_test.py
+    scripts/stop_turn_go_controller.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

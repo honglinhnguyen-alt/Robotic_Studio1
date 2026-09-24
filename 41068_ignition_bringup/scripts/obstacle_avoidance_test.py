@@ -29,6 +29,9 @@ class ObstacleAvoidanceTest(Node):
         self.declare_parameter('goal_x', 6.0)
         self.declare_parameter('goal_y', 0.0)
         self.declare_parameter('goal_yaw', 0.0)
+        self.goal_x = float(self.get_parameter('goal_x').value)
+        self.goal_y = float(self.get_parameter('goal_y').value)
+        self.goal_yaw = float(self.get_parameter('goal_yaw').value)
 
         self.declare_parameter(
             'map_frame',
@@ -103,17 +106,9 @@ class ObstacleAvoidanceTest(Node):
         # Read test goal parameters
         # --------------------------------------------------------------
 
-        goal_x = float(
-            self.get_parameter('goal_x').value
-        )
-
-        goal_y = float(
-            self.get_parameter('goal_y').value
-        )
-
-        goal_yaw = float(
-            self.get_parameter('goal_yaw').value
-        )
+        goal_x = self.goal_x
+        goal_y = self.goal_y
+        goal_yaw = self.goal_yaw
 
         map_frame = str(
             self.get_parameter('map_frame').value
@@ -204,24 +199,30 @@ class ObstacleAvoidanceTest(Node):
 
     def _feedback_callback(self, feedback_msg):
 
-        # Do not spam the terminal with feedback.
         now = time.monotonic()
 
         if now - self.last_feedback_log_time < 2.0:
             return
 
-
         self.last_feedback_log_time = now
 
+        feedback = feedback_msg.feedback
 
-        distance = (
-            feedback_msg.feedback.distance_remaining
+        nav2_distance = float(feedback.distance_remaining)
+
+        current_x = feedback.current_pose.pose.position.x
+        current_y = feedback.current_pose.pose.position.y
+
+        direct_distance = math.hypot(
+            self.goal_x - current_x,
+            self.goal_y - current_y
         )
 
-
         self.get_logger().info(
-            f'Distance remaining: '
-            f'{distance:.2f} m.'
+            f'Nav2 path remaining: {nav2_distance:.2f} m | '
+            f'Direct goal distance: {direct_distance:.2f} m | '
+            f'Robot: ({current_x:.2f}, {current_y:.2f}) | '
+            f'Recoveries: {feedback.number_of_recoveries}'
         )
 
 

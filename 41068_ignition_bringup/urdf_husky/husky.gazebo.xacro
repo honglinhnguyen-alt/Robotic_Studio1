@@ -194,7 +194,7 @@
 
       <topic>model/${gz_model_name}/scan</topic>
 
-      <update_rate>3</update_rate>
+      <update_rate>10</update_rate> <!-- was 3 -->
 
       <gz_frame_id>${prefix}base_scan</gz_frame_id>
 

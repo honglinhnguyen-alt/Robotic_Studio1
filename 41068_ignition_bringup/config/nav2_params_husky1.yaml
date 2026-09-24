@@ -44,6 +44,9 @@ bt_navigator:
     global_frame: husky1_map
     robot_base_frame: husky1_base_link
     odom_topic: odom
+    
+    default_nav_to_pose_bt_xml: "$(find-pkg-share 41068_ignition_bringup)/config/navigate_to_pose_w_replanning_0_5hz.xml"
+    
     bt_loop_duration: 10
     default_server_timeout: 20
     wait_for_service_timeout: 1000
@@ -104,7 +107,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: true
-    controller_frequency: 5.0
+    controller_frequency: 10.0 #5.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -121,37 +124,120 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: nav2_controller::SimpleGoalChecker
-      xy_goal_tolerance: 1.0
-      yaw_goal_tolerance: 1.57
+      xy_goal_tolerance: 0.25 #1.0
+      yaw_goal_tolerance: 3.14 #1.57
+    # FollowPath:
+    #   plugin: dwb_core::DWBLocalPlanner
+    #   debug_trajectory_details: false
+      # min_vel_x: 0.0
+      # min_vel_y: 0.0
+      # max_vel_x: 0.25 #1.0
+      # max_vel_y: 0.0
+      # max_vel_theta: 2.8 #1.5
+      # min_speed_xy: 0.0
+      # max_speed_xy: 0.25 #1.0
+      # min_speed_theta: 0.0
+      # acc_lim_x: 0.8 #2.5
+      # acc_lim_y: 0.0
+      # acc_lim_theta: 3.2
+      # decel_lim_x: -2.5
+      # decel_lim_y: 0.0
+      # decel_lim_theta: -3.2
+      # vx_samples: 7
+      # vy_samples: 1
+      # vtheta_samples: 7
+      # sim_time: 2.0
+      # linear_granularity: 0.2
+      # angular_granularity: 0.2
+      # transform_tolerance: 0.2
+      # xy_goal_tolerance: 0.25 #1.0
+      # yaw_goal_tolerance: 0.35 #1.57
+      # trans_stopped_velocity: 0.25
+      # short_circuit_trajectory_evaluation: true
+      # stateful: true
+      # critics:
+      # - RotateToGoal
+      # - Oscillation
+      # - BaseObstacle
+      # - GoalAlign
+      # - PathAlign
+      # - PathDist
+      # - GoalDist
+      # BaseObstacle.scale: 0.02
+      # PathAlign.scale: 32.0
+      # PathAlign.forward_point_distance: 0.1
+      # GoalAlign.scale: 32.0
+      # GoalAlign.forward_point_distance: 0.1
+      # PathDist.scale: 32.0
+      # GoalDist.scale: 24.0
+      # RotateToGoal.scale: 32.0
+      # RotateToGoal.xy_goal_tolerance: 0.25 #2.0
+      # RotateToGoal.slowing_factor: 5.0
+      # RotateToGoal.lookahead_time: -1.0
     FollowPath:
-      plugin: dwb_core::DWBLocalPlanner
+      # First rotate Husky to align with the newly planned path.
+      # DWB still remains the main path-following controller.
+      plugin: nav2_rotation_shim_controller::RotationShimController
+      primary_controller: dwb_core::DWBLocalPlanner
+
+      # Start rotate-in-place if new path differs by > ~20 deg
+      angular_dist_threshold: 0.20
+
+      # Once rotating, continue until error is < ~3 deg
+      angular_disengage_threshold: 0.025
+
+      # Look ahead on the new Nav2 path to determine desired heading
+      forward_sampling_distance: 0.5
+
+      # Rotation behaviour
+      rotate_to_heading_angular_vel: 0.55
+      max_angular_accel: 1.5
+      simulate_ahead_time: 1.0
+
+      # We only need this for path alignment
+      rotate_to_goal_heading: false
+      closed_loop: true
+
+      # ---------------------------------------------------------
+      # Existing DWB controller configuration
+      # Keep these parameters
+      # ---------------------------------------------------------
       debug_trajectory_details: false
+
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 1.0
+      max_vel_x: 0.25
       max_vel_y: 0.0
-      max_vel_theta: 1.5
+      max_vel_theta: 2.8
+
       min_speed_xy: 0.0
-      max_speed_xy: 1.0
+      max_speed_xy: 0.25
       min_speed_theta: 0.0
-      acc_lim_x: 2.5
+
+      acc_lim_x: 0.8
       acc_lim_y: 0.0
       acc_lim_theta: 3.2
+
       decel_lim_x: -2.5
       decel_lim_y: 0.0
       decel_lim_theta: -3.2
+
       vx_samples: 7
       vy_samples: 1
       vtheta_samples: 7
+
       sim_time: 2.0
       linear_granularity: 0.2
       angular_granularity: 0.2
       transform_tolerance: 0.2
-      xy_goal_tolerance: 1.0
-      yaw_goal_tolerance: 1.57
+
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.35
       trans_stopped_velocity: 0.25
+
       short_circuit_trajectory_evaluation: true
       stateful: true
+
       critics:
       - RotateToGoal
       - Oscillation
@@ -160,6 +246,7 @@ controller_server:
       - PathAlign
       - PathDist
       - GoalDist
+
       BaseObstacle.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
@@ -167,14 +254,15 @@ controller_server:
       GoalAlign.forward_point_distance: 0.1
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
+
       RotateToGoal.scale: 32.0
-      RotateToGoal.xy_goal_tolerance: 2.0
+      RotateToGoal.xy_goal_tolerance: 0.25
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
+      update_frequency: 10.0 #5.0
       publish_frequency: 5.0
       global_frame: husky1_odom
       robot_base_frame: husky1_base_link
@@ -320,32 +408,58 @@ waypoint_follower:
       plugin: nav2_waypoint_follower::WaitAtWaypoint
       enabled: true
       waypoint_pause_duration: 200
+# velocity_smoother:
+#   ros__parameters:
+#     use_sim_time: true
+#     smoothing_frequency: 20.0
+#     scale_velocities: false
+#     feedback: OPEN_LOOP
+#     max_velocity:
+#     - 1.0
+#     - 0.0
+#     - 1.5
+#     min_velocity:
+#     - -1.0
+#     - 0.0
+#     - -1.5
+#     max_accel:
+#     - 2.5
+#     - 0.0
+#     - 3.2
+#     max_decel:
+#     - -2.5
+#     - 0.0
+#     - -3.2
 velocity_smoother:
   ros__parameters:
     use_sim_time: true
     smoothing_frequency: 20.0
     scale_velocities: false
     feedback: OPEN_LOOP
+
     max_velocity:
-    - 1.0
+    - 0.35
     - 0.0
     - 1.5
+
     min_velocity:
-    - -1.0
+    - -0.35
     - 0.0
     - -1.5
+
     max_accel:
-    - 2.5
+    - 0.8
     - 0.0
     - 3.2
+
     max_decel:
     - -2.5
     - 0.0
     - -3.2
-    odom_topic: odom
-    odom_duration: 0.1
-    deadband_velocity:
-    - 0.0
-    - 0.0
-    - 0.0
-    velocity_timeout: 1.0
+  # odom_topic: odom
+  # odom_duration: 0.1
+  # deadband_velocity:
+  # - 0.0
+  # - 0.0
+  # - 0.0
+  # velocity_timeout: 1.0

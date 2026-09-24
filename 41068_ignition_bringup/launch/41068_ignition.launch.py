@@ -52,6 +52,7 @@ def add_robot(
     z,
     yaw='0.0',
     spawn_delay=0.0,
+    stop_turn_go=False,
 ):
     """Add one robot instance to the launch description.
 
@@ -135,6 +136,11 @@ def add_robot(
         condition=robot_enabled,
     ))
 
+    # For the Husky, insert a strict stop-turn-go gate between Nav2 and Gazebo.
+    # Nav2 keeps publishing /<robot>/cmd_vel, while the Gazebo bridge receives
+    # only the filtered /<robot>/cmd_vel_stg command.
+    bridge_remappings = [('cmd_vel', 'cmd_vel_stg')] if stop_turn_go else []
+
     ld.add_action(Node(
         package='ros_ign_bridge',
         executable='parameter_bridge',
@@ -145,8 +151,33 @@ def add_robot(
             'config_file': PathJoinSubstitution([config_path, bridge_config]),
             'use_sim_time': use_sim_time,
         }],
+        remappings=bridge_remappings,
         condition=robot_enabled,
     ))
+
+    if stop_turn_go:
+        ld.add_action(Node(
+            package='41068_ignition_bringup',
+            executable='stop_turn_go_controller.py',
+            namespace=namespace,
+            name='stop_turn_go_controller',
+            output='screen',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'input_cmd_topic': 'cmd_vel',
+                'output_cmd_topic': 'cmd_vel_stg',
+                'scan_topic': 'scan',
+                'odom_topic': 'odom',
+                'stopping_distance': 1.10,
+                'front_sector_half_angle': 0.55,
+                'turn_enter_threshold': 0.10,
+                'turn_exit_threshold': 0.035,
+                'minimum_stop_time': 0.20,
+                'allow_reverse': False,
+            }],
+            condition=robot_enabled,
+        ))
+
 
 
 def add_navigation_instance(
@@ -269,7 +300,7 @@ def generate_launch_description():
     )
     ld.add_action(parrot_launch_arg)
 
-        world_launch_arg = DeclareLaunchArgument(
+    world_launch_arg = DeclareLaunchArgument(
         'world',
         default_value='simple_trees',
         description='Which world to load',
@@ -342,6 +373,7 @@ def generate_launch_description():
         y='0.0',
         z='0.4',
         spawn_delay=3.0,
+        stop_turn_go=True,
     )
 
     add_robot(
