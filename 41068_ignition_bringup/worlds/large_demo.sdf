@@ -63,12 +63,12 @@
       <name>forest_plane</name>
       <pose>0 0 0 0 0 0</pose>
     </include>
-    <!-- <include>
+    <include>
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/platypus</uri>
       <name>platypus1</name>
       <pose>-8 6 0 0 0 0</pose>
-    </include> -->
-    <!-- <include>
+    </include>
+    <include>
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%201</uri>
       <name>rock1</name>
       <pose>-6.30926 -8.38159 0 0 0 0</pose>
@@ -97,7 +97,7 @@
       <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%206</uri>
       <name>rock6</name>
       <pose>-14 -12 0 0 0 0</pose>
-    </include> -->
+    </include>
     <include>
       <uri>model://female_deer</uri>
       <name>female_deer1</name>
@@ -138,81 +138,70 @@
       <name>custom_rock_2</name>
       <pose>0 -5 0 0 0 0.5</pose>
     </include>
- <!-- <include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_01</name>
-  <pose>-14 10 0 0 0 2.27817</pose>
-</include> -->
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_02</name>
-  <pose>-8 14 0 0 0 0.703068</pose>
-</include>
-
-<include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_03</name>
-  <pose>-16 2 0 0 0 2.50703</pose>
-</include>
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_04</name>
-  <pose>14 -12 0 0 0 -2.47168</pose>
-</include>
-
-<include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_05</name>
-  <pose>9 -15 0 0 0 -2.71601</pose>
-</include>
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_06</name>
-  <pose>16 -3 0 0 0 -2.70706</pose>
-</include>
-
-<include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_07</name>
-  <pose>-3 16 0 0 0 1.82949</pose>
-</include>
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_08</name>
-  <pose>5 15 0 0 0 1.45752</pose>
-</include>
-<!-- 
-<include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_09</name>
-  <pose>15 8 0 0 0 -2.6429</pose>
-</include> -->
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_10</name>
-  <pose>10 12 0 0 0 -0.184888</pose>
-</include>
-
-<include>
-  <uri>model://rock_1</uri>
-  <name>forest_rock_11</name>
-  <pose>-13 -11 0 0 0 2.45017</pose>
-</include>
-
-<include>
-  <uri>model://rock_2</uri>
-  <name>forest_rock_12</name>
-  <pose>-6 -15 0 0 0 -1.02971</pose>
-</include>
-    =========================================================
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_01</name>
+      <pose>-25 18 0 0 0 2.27817</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_02</name>
+      <pose>-23.8 19.3 0 0 0 0.703068</pose>
+    </include>
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_03</name>
+      <pose>-26.3 20.4 0 0 0 2.50703</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_04</name>
+      <pose>23 -19 0 0 0 -2.47168</pose>
+    </include>
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_05</name>
+      <pose>24.4 -18.1 0 0 0 -2.71601</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_06</name>
+      <pose>25 -21 0 0 0 -2.70706</pose>
+    </include>
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_07</name>
+      <pose>-12 24 0 0 0 1.82949</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_08</name>
+      <pose>-10.5 25.3 0 0 0 1.45752</pose>
+    </include>
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_09</name>
+      <pose>20 19 0 0 0 -2.6429</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_10</name>
+      <pose>21.5 20.2 0 0 0 -0.184888</pose>
+    </include>
+    <include>
+      <uri>model://rock_1</uri>
+      <name>forest_rock_11</name>
+      <pose>-24 -20 0 0 0 2.45017</pose>
+    </include>
+    <include>
+      <uri>model://rock_2</uri>
+      <name>forest_rock_12</name>
+      <pose>-25.2 -21.4 0 0 0 -1.02971</pose>
+    </include>
+    <!-- ========================================================= -->
     <!-- DENSE BACKGROUND TREES - mixed irregular groves including the centre -->
     <!-- ========================================================= -->
-    <!-- <include>
+    <include>
       <uri>model://tree_background_06</uri>
       <name>tree_background_06_001</name>
       <pose>-10.312 10.177 0 0 0 1.3597</pose>
@@ -1111,11 +1100,11 @@
       <uri>model://tree_background_06</uri>
       <name>tree_background_06_019</name>
       <pose>9.674 -28.832 0.0 0.0 0.0 -0.3102</pose>
-    </include> -->
+    </include>
     <!-- ========================================================= -->
     <!-- UNDERGROWTH AND GRASS - clustered at tree bases and forest edges -->
     <!-- ========================================================= -->
-    <!-- <include>
+    <include>
       <uri>model://plant_small_02</uri>
       <name>plant_small_02_001</name>
       <pose>0.012 20.768 0 0 0 -2.4871</pose>
@@ -1604,7 +1593,7 @@
       <uri>model://plant_small_05</uri>
       <name>plant_small_05_038</name>
       <pose>24.196 11.148 0 0 0 -0.1036</pose>
-    </include> -->
+    </include>
     <!-- IRREGULAR ROCK RING: assets from husky_rockpack; model scales remain 1 1 1. -->
     <!-- Ground-plane footprint checked; live Gazebo collision/navigation verification still required. -->
     <include>
@@ -1827,17 +1816,17 @@
       <name>perimeter_cliff_044</name>
       <pose>36.859 -5.8756 -1.2042 0 0 7.835513</pose>
     </include>
-    <!-- <include>
+    <include>
       <uri>model://rock_cliff_03</uri>
       <name>perimeter_shelf_045</name>
       <pose>26.1616 25.8807 -1.0 0 0 1.58</pose>
-    </include> -->
-    <!-- <include>
+    </include>
+    <include>
       <uri>model://rock_cliff_04</uri>
       <name>perimeter_shelf_046</name>
       <pose>-25.6808 -26.3578 -1.0 0 0 4.74</pose>
-    </include> -->
-    <!-- <include>
+    </include>
+    <include>
       <uri>model://rock_pillar_01</uri>
       <name>perimeter_pillar_047</name>
       <pose>41.2537 -3.3985 -1.6983 0 0 -0.497028</pose>
@@ -2331,158 +2320,29 @@
       <uri>model://rock_detail_04</uri>
       <name>perimeter_scree_145</name>
       <pose>26.6455 -6.5362 -0.1029 0 0 1.535718</pose>
-    </include> -->
+    </include>
 
     <!-- Bear -->
-    <!-- <include>
+    <include>
       <uri>model://bear_v01</uri>
       <name>bear_1</name>
       <pose>-10 8 0 0 0 0.7</pose>
-    </include> -->
+    </include>
 
     <!-- Buffalo -->
-    <!-- <include>
+    <include>
       <uri>model://buffalo_v01</uri>
       <name>buffalo_1</name>
       <pose>10 8 0 0 0 -1.0</pose>
-    </include> -->
+    </include>
 
     <!-- Lioness -->
-    <!-- <include>
+    <include>
       <uri>model://lioness_v01</uri>
       <name>lioness_1</name>
       <pose>12 -8 0 0 0 2.2</pose>
-    </include> -->
-    <!-- ========================================================= -->
-<!-- EXPLORATION TEST OBSTACLES -->
-<!-- Boxes provide LiDAR-visible structure for explore_lite -->
-<!-- ========================================================= -->
+    </include>
 
-<model name="explore_box_1">
-  <static>true</static>
-  <pose>15 5 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
-
-<model name="explore_box_2">
-  <static>true</static>
-  <pose>-5 15 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
-
-<model name="explore_box_3">
-  <static>true</static>
-  <pose>-15 7 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
-
-<model name="explore_box_4">
-  <static>true</static>
-  <pose>-14 -10 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
-
-<model name="explore_box_5">
-  <static>true</static>
-  <pose>2 -16 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
-
-<model name="explore_box_6">
-  <static>true</static>
-  <pose>15 -8 1 0 0 0</pose>
-  <link name="link">
-    <collision name="collision">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </collision>
-    <visual name="visual">
-      <geometry>
-        <box>
-          <size>3 3 2</size>
-        </box>
-      </geometry>
-    </visual>
-  </link>
-</model>
     <!-- OIIA Cat -->
     <include>
       <uri>model://oiia_cat_v01</uri>
@@ -2491,10 +2351,10 @@
     </include>
 
     <!-- Tung Tung Tung Sahur -->
-    <!-- <include>
+    <include>
       <uri>model://tung_sahur_v01</uri>
       <name>tung_sahur_1</name>
       <pose>0 12 0 0 0 -1.57</pose>
-    </include>     -->
+    </include>    
   </world>
 </sdf>

@@ -71,14 +71,6 @@ public:
   geometry_msgs::msg::Pose getRobotPose() const;
 
   /**
-   * @brief Get the latest available pose of the robot in the global frame.
-   * @param pose output pose (unchanged if the lookup fails)
-   * @return false if TF could not provide the transform. Callers should skip
-   * the planning cycle instead of planning from a fake (0,0) pose.
-   */
-  bool getRobotPose(geometry_msgs::msg::Pose& pose) const;
-
-  /**
    * @brief Return a pointer to the "master" costmap which receives updates from
    * all the layers.
    *

@@ -221,35 +221,40 @@ void Costmap2DClient::updatePartialMap(
 
 geometry_msgs::msg::Pose Costmap2DClient::getRobotPose() const
 {
-  geometry_msgs::msg::Pose pose;  // stays (0,0) if the lookup fails
-  getRobotPose(pose);
-  return pose;
-}
+  geometry_msgs::msg::PoseStamped robot_pose;
+  geometry_msgs::msg::Pose empty_pose;
+  robot_pose.header.frame_id = robot_base_frame_;
+  robot_pose.header.stamp = node_.now();
 
-bool Costmap2DClient::getRobotPose(geometry_msgs::msg::Pose& pose) const
-{
   auto& clk = *node_.get_clock();
+
+  // get the global pose of the robot
   try {
-    // Ask for the LATEST available transform (TimePointZero) instead of
-    // "now()". Asking for now() is what produced
-    // "Lookup would require extrapolation into the future" whenever TF lagged
-    // a few ms behind the sim clock; the old code then silently returned an
-    // empty pose (0,0) and frontiers were ranked from the map origin.
-    geometry_msgs::msg::TransformStamped tf = tf_->lookupTransform(
-        global_frame_, robot_base_frame_, tf2::TimePointZero,
-        tf2::durationFromSec(transform_tolerance_));
-    pose.position.x = tf.transform.translation.x;
-    pose.position.y = tf.transform.translation.y;
-    pose.position.z = tf.transform.translation.z;
-    pose.orientation = tf.transform.rotation;
-    return true;
-  } catch (tf2::TransformException& ex) {
+    robot_pose = tf_->transform(robot_pose, global_frame_,
+                                tf2::durationFromSec(transform_tolerance_));
+  } catch (tf2::LookupException& ex) {
     RCLCPP_ERROR_THROTTLE(node_.get_logger(), clk, 1000,
-                          "Error looking up robot pose (%s -> %s): %s",
-                          global_frame_.c_str(), robot_base_frame_.c_str(),
+                          "No Transform available Error looking up robot pose: "
+                          "%s\n",
                           ex.what());
-    return false;
+    return empty_pose;
+  } catch (tf2::ConnectivityException& ex) {
+    RCLCPP_ERROR_THROTTLE(node_.get_logger(), clk, 1000,
+                          "Connectivity Error looking up robot pose: %s\n",
+                          ex.what());
+    return empty_pose;
+  } catch (tf2::ExtrapolationException& ex) {
+    RCLCPP_ERROR_THROTTLE(node_.get_logger(), clk, 1000,
+                          "Extrapolation Error looking up robot pose: %s\n",
+                          ex.what());
+    return empty_pose;
+  } catch (tf2::TransformException& ex) {
+    RCLCPP_ERROR_THROTTLE(node_.get_logger(), clk, 1000, "Other error: %s\n",
+                          ex.what());
+    return empty_pose;
   }
+
+  return robot_pose.pose;
 }
 
 std::array<unsigned char, 256> init_translation_table()
