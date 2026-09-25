@@ -3,12 +3,22 @@
   <model name="campfire">
     <static>true</static>
 
+    <!--
+      Scaled x1.8 so the Husky 2D lidar can see the campfire.
+      The lidar scans one horizontal plane about 0.81 m above the ground.
+      At scale 1 the campfire is only 0.73 m tall, and its top is two thin
+      flame tips, so the lidar never saw it (even at x1.3 the cut is 6 cm wide).
+      At scale 1.8 it is 1.32 m tall. The scan plane cuts the two flames in a
+      0.44 x 0.23 m section. The logs at the base are 1.0 x 1.15 m and stay
+      below the scan plane.
+      Keep the visual and collision scales equal.
+    -->
     <link name="link">
     <visual name="visual">
       <geometry>
         <mesh>
           <uri>meshes/camfire.dae</uri>
-          <scale>1 1 1</scale>
+          <scale>1.8 1.8 1.8</scale>
         </mesh>
       </geometry>
 
@@ -24,7 +34,7 @@
         <geometry>
           <mesh>
             <uri>meshes/camfire.dae</uri>
-            <scale>1 1 1</scale>
+            <scale>1.8 1.8 1.8</scale>
           </mesh>
         </geometry>
       </collision>
