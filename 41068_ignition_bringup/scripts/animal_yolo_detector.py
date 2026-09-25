@@ -20,10 +20,17 @@ When ``thermal_gate_enabled`` is true, YOLO remains idle until the thermal
 detector publishes at least one hot region. The hot region is projected into
 the RGB image using both cameras' fields of view; only a YOLO box associated
 with that region is accepted as the heat-source classification.
+
+Each RGB frame is paired with the thermal frame closest in time (the RGB
+camera runs at 3 Hz and the thermal camera at 10 Hz), and frames captured
+while the robot turns quickly are skipped, because the two images would no
+longer show the same scene. A hot region that is too small in the RGB image
+for YOLO is reported as ``too_far``, and one cut by the thermal image edge as
+``partial``, instead of ``unknown_heat_source``. Neither gets a class vote.
 """
 
 import json
-from collections import Counter
+from collections import Counter, deque
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -32,6 +39,7 @@ import cv_bridge
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
+from nav_msgs.msg import Odometry
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
@@ -44,6 +52,14 @@ from perception_common import (
     category_for_class,
     center_size_to_xyxy,
     project_box_between_cameras,
+    short_tag,
+)
+from perception_overlay import (
+    THERMAL_ROI_COLOUR,
+    LabelPlacer,
+    colour_for_status,
+    draw_legend,
+    draw_tag,
 )
 
 
@@ -87,7 +103,24 @@ class AnimalYoloDetector(Node):
         self.declare_parameter('thermal_rgb_offset_x_px', 0.0)
         self.declare_parameter('thermal_rgb_offset_y_px', 0.0)
         self.declare_parameter('minimum_thermal_overlap', 0.05)
-        self.declare_parameter('max_rgb_thermal_age_sec', 1.0)
+        # Pair each RGB frame with the thermal frame closest in time; reject
+        # pairs further apart than this.
+        self.declare_parameter('max_rgb_thermal_age_sec', 0.15)
+        self.declare_parameter('thermal_buffer_sec', 2.0)
+        # Cancel the verification window after this many empty thermal frames.
+        self.declare_parameter('thermal_empty_reset_frames', 3)
+        # Skip verification frames while the robot turns faster than this
+        # [rad/s]; 0 disables the check.
+        self.declare_parameter('max_verification_yaw_rate', 0.35)
+        self.declare_parameter('odometry_topic', 'odometry')
+        # A projected hot region shorter than this in the RGB image is too
+        # small for YOLO; it is reported as too_far, not unknown_heat_source.
+        self.declare_parameter('min_classify_height_px', 18.0)
+        # A hot region touching the left/right edge of the thermal image is
+        # only partly visible, so its centre is biased and it could be matched
+        # to a neighbouring animal that only the wider RGB camera sees. Such
+        # regions are reported as partial and get no vote. 0 disables.
+        self.declare_parameter('thermal_edge_margin_px', 1.0)
         self.declare_parameter('thermal_retrigger_sec', 0.0)
         self.declare_parameter('verification_frames', 5)
         self.declare_parameter('verification_min_votes', 3)
@@ -177,10 +210,28 @@ class AnimalYoloDetector(Node):
         else:
             thermal_topic = '(disabled)'
 
+        self.odometry_sub = None
+        if (
+            thermal_gate_enabled
+            and float(self.get_parameter('max_verification_yaw_rate').value) > 0.0
+        ):
+            self.odometry_sub = self.create_subscription(
+                Odometry,
+                str(self.get_parameter('odometry_topic').value),
+                self._odometry_callback,
+                qos_profile_sensor_data,
+            )
+
         self.latest_image_msg: Optional[Image] = None
         self.latest_frame_number = 0
         self.last_processed_frame_number = -1
         self.latest_thermal_msg: Optional[Detection2DArray] = None
+        self.thermal_buffer = deque()
+        self.window_candidate_ids = set()
+        self.latest_yaw_rate: Optional[float] = None
+        self.empty_thermal_frames = 0
+        self.last_turn_log_ns = -10**30
+        self.last_pairing_log_ns = -10**30
         self.thermal_active = False
         self.thermal_candidate_ids: List[str] = []
         self.last_thermal_trigger_ns = -10**30
@@ -188,6 +239,8 @@ class AnimalYoloDetector(Node):
         self.verification_active = False
         self.verification_candidate_ids: List[str] = []
         self.verification_votes: Dict[str, List[Dict[str, object]]] = {}
+        self.verification_status_counts: Dict[str, Counter] = {}
+        self.verification_last_match: Dict[str, Tuple[int, Dict[str, object]]] = {}
         self.verification_frames_seen = 0
         self.verification_last_frame_number = -1
         self.verification_last_inference_ns = -10**30
@@ -231,22 +284,37 @@ class AnimalYoloDetector(Node):
         if self.verification_active:
             self._maybe_run_verification()
 
+    def _odometry_callback(self, msg: Odometry) -> None:
+        self.latest_yaw_rate = abs(float(msg.twist.twist.angular.z))
+
     def _thermal_callback(self, msg: Detection2DArray) -> None:
         """Start or update a multi-frame verification for every heat region."""
+        self._buffer_thermal(msg)
         if not msg.detections:
-            self.thermal_active = False
-            self.thermal_candidate_ids = []
-            self.latest_thermal_msg = None
-            self._reset_verification()
+            # One empty frame (a source hidden for a moment) does not cancel
+            # the verification window; several in a row do.
+            self.empty_thermal_frames += 1
+            if self.empty_thermal_frames >= max(
+                1,
+                int(self.get_parameter('thermal_empty_reset_frames').value),
+            ):
+                self.thermal_active = False
+                self.thermal_candidate_ids = []
+                self.window_candidate_ids = set()
+                self.latest_thermal_msg = None
+                self._reset_verification()
             return
+        self.empty_thermal_frames = 0
 
         candidate_ids = self._candidate_ids(msg)
-        previous_ids = set(self.thermal_candidate_ids)
-        candidates_changed = (
-            self.thermal_active
-            and previous_ids
-            and set(candidate_ids) != previous_ids
-        )
+        # Stable track IDs come from the thermal node, so only a genuinely new
+        # heat source restarts the window. A source that briefly disappears
+        # keeps its votes.
+        new_ids = [
+            candidate_id for candidate_id in candidate_ids
+            if candidate_id not in self.window_candidate_ids
+        ]
+        candidates_changed = self.thermal_active and bool(new_ids)
         self.thermal_candidate_ids = candidate_ids
         self.latest_thermal_msg = msg
         now_ns = self.get_clock().now().nanoseconds
@@ -264,7 +332,7 @@ class AnimalYoloDetector(Node):
         elif candidates_changed:
             self._start_verification(
                 msg,
-                reason='thermal candidate set changed',
+                reason='new thermal candidate ' + ', '.join(new_ids),
             )
         elif not self.verification_active and retrigger_due:
             self._start_verification(msg, reason='periodic retrigger')
@@ -281,9 +349,12 @@ class AnimalYoloDetector(Node):
     ) -> None:
         self.latest_thermal_msg = thermal_msg
         self.verification_candidate_ids = self._candidate_ids(thermal_msg)
+        self.window_candidate_ids = set(self.verification_candidate_ids)
         self.verification_votes = {
             candidate_id: [] for candidate_id in self.verification_candidate_ids
         }
+        self.verification_status_counts = {}
+        self.verification_last_match = {}
         self.verification_frames_seen = 0
         # Require the next RGB callback, rather than reusing an older cached
         # frame that may have been captured before the heat was confirmed.
@@ -302,7 +373,30 @@ class AnimalYoloDetector(Node):
         self.verification_active = False
         self.verification_candidate_ids = []
         self.verification_votes = {}
+        self.verification_status_counts = {}
+        self.verification_last_match = {}
         self.verification_frames_seen = 0
+
+    def _buffer_thermal(self, msg: Detection2DArray) -> None:
+        """Keep recent thermal frames so each RGB frame gets its closest one."""
+        stamp = self._stamp_seconds(msg.header.stamp)
+        self.thermal_buffer.append((stamp, msg))
+        keep = max(0.2, float(self.get_parameter('thermal_buffer_sec').value))
+        while self.thermal_buffer and stamp - self.thermal_buffer[0][0] > keep:
+            self.thermal_buffer.popleft()
+
+    def _closest_thermal(
+        self,
+        rgb_stamp: float,
+    ) -> Tuple[Optional[Detection2DArray], float, float]:
+        """Return ``(message, |dt|, newest thermal stamp)`` for an RGB stamp."""
+        if not self.thermal_buffer:
+            return None, float('inf'), float('-inf')
+        stamp, msg = min(
+            self.thermal_buffer,
+            key=lambda item: abs(item[0] - rgb_stamp),
+        )
+        return msg, abs(stamp - rgb_stamp), self.thermal_buffer[-1][0]
 
     def _maybe_run_verification(self) -> None:
         if (
@@ -324,20 +418,54 @@ class AnimalYoloDetector(Node):
         if now_ns - self.verification_last_inference_ns < minimum_interval_ns:
             return
 
-        thermal_msg = self.latest_thermal_msg
         rgb_msg = self.latest_image_msg
+        max_yaw_rate = float(self.get_parameter('max_verification_yaw_rate').value)
+        if (
+            max_yaw_rate > 0.0
+            and self.latest_yaw_rate is not None
+            and self.latest_yaw_rate > max_yaw_rate
+        ):
+            # While turning, the 3 Hz RGB frame and the 10 Hz thermal frame
+            # show different scenes and the projected box lands beside the
+            # animal. Skip this frame; the window continues afterwards.
+            self.verification_last_frame_number = self.latest_frame_number
+            if now_ns - self.last_turn_log_ns > int(2e9):
+                self.last_turn_log_ns = now_ns
+                self.get_logger().info(
+                    f'Skipping YOLO verification frames while turning '
+                    f'(|w|={self.latest_yaw_rate:.2f} rad/s > {max_yaw_rate:.2f}).'
+                )
+            return
+
         max_age = max(
             0.0,
             float(self.get_parameter('max_rgb_thermal_age_sec').value),
         )
-        thermal_stamp = self._stamp_seconds(thermal_msg.header.stamp)
         rgb_stamp = self._stamp_seconds(rgb_msg.header.stamp)
-        if thermal_stamp > 0.0 and rgb_stamp > 0.0:
-            difference = abs(rgb_stamp - thermal_stamp)
-            if difference > max_age:
-                # Wait for the lagging sensor rather than voting with an
-                # unsynchronised pair of images.
+        thermal_msg = self.latest_thermal_msg
+        if rgb_stamp > 0.0:
+            closest, difference, newest_thermal = self._closest_thermal(rgb_stamp)
+            if closest is None or difference > max_age:
+                if newest_thermal < rgb_stamp:
+                    # The thermal stream is behind this RGB frame: wait for
+                    # the next thermal message and try the same frame again.
+                    return
+                # No thermal frame close to this RGB frame: skip it.
+                self.verification_last_frame_number = self.latest_frame_number
+                if now_ns - self.last_pairing_log_ns > int(5e9):
+                    self.last_pairing_log_ns = now_ns
+                    self.get_logger().warning(
+                        f'No thermal frame within {max_age:.2f} s of the RGB frame '
+                        f'(closest {difference:.2f} s); skipping it. If this '
+                        'repeats, check use_sim_time and the camera timestamps, '
+                        'or raise max_rgb_thermal_age_sec.'
+                    )
                 return
+            thermal_msg = closest
+        if not thermal_msg.detections:
+            # At the RGB capture time the heat source was not visible.
+            self.verification_last_frame_number = self.latest_frame_number
+            return
 
         self.verification_last_frame_number = self.latest_frame_number
         self.verification_last_inference_ns = now_ns
@@ -577,6 +705,38 @@ class AnimalYoloDetector(Node):
             )
             for box in thermal_boxes
         ]
+        # The same projection without the search margin gives the real size of
+        # the hot region in the RGB image, used for the too_far decision.
+        tight_rois = [
+            project_box_between_cameras(
+                box,
+                source_size=(
+                    int(self.get_parameter('thermal_image_width').value),
+                    int(self.get_parameter('thermal_image_height').value),
+                ),
+                destination_size=(image_width, image_height),
+                source_hfov_deg=float(
+                    self.get_parameter('thermal_hfov_deg').value
+                ),
+                destination_hfov_deg=float(
+                    self.get_parameter('rgb_hfov_deg').value
+                ),
+                margin=1.0,
+                offset_pixels=(
+                    float(self.get_parameter('thermal_rgb_offset_x_px').value),
+                    float(self.get_parameter('thermal_rgb_offset_y_px').value),
+                ),
+            )
+            for box in thermal_boxes
+        ]
+        minimum_height = float(self.get_parameter('min_classify_height_px').value)
+        edge_margin = float(self.get_parameter('thermal_edge_margin_px').value)
+        thermal_width = int(self.get_parameter('thermal_image_width').value)
+        at_edge = [
+            edge_margin > 0.0
+            and (box[0] <= edge_margin - 1.0 or box[2] >= thermal_width - edge_margin)
+            for box in thermal_boxes
+        ]
         rgb_boxes = [record['box'] for record in records]
         rgb_scores = [float(record['score']) for record in records]
         assignments = associate_detections(
@@ -587,6 +747,12 @@ class AnimalYoloDetector(Node):
                 self.get_parameter('minimum_thermal_overlap').value
             ),
         )
+        # Regions cut by the thermal image edge are not classified (see
+        # thermal_edge_margin_px); their YOLO box stays free for others.
+        assignments = [
+            None if edge else assignment
+            for assignment, edge in zip(assignments, at_edge)
+        ]
 
         native_classes = self.get_parameter('native_classes').value
         exotic_classes = self.get_parameter('exotic_classes').value
@@ -600,18 +766,33 @@ class AnimalYoloDetector(Node):
             candidate_id,
             thermal_box,
             projected_roi,
+            tight_roi,
             assignment,
         ) in enumerate(
-            zip(candidate_ids, thermal_boxes, projected_rois, assignments)
+            zip(
+                candidate_ids,
+                thermal_boxes,
+                projected_rois,
+                tight_rois,
+                assignments,
+            )
         ):
+            roi_height = float(tight_roi[3] - tight_roi[1])
             if assignment is None:
+                if at_edge[region_index]:
+                    status, class_name = 'partial', 'partial_view'
+                elif roi_height < minimum_height:
+                    status, class_name = 'too_far', 'too_far_to_classify'
+                else:
+                    status, class_name = 'unresolved', 'unknown_heat_source'
                 result_items.append({
                     'thermal_region': region_index,
                     'candidate_id': candidate_id,
-                    'status': 'unresolved',
-                    'class_name': 'unknown_heat_source',
+                    'status': status,
+                    'class_name': class_name,
                     'category': 'unknown',
                     'confidence': 0.0,
+                    'rgb_roi_height_px': round(roi_height, 1),
                     'thermal_bbox': self._box_payload(thermal_box),
                     'projected_rgb_roi': self._box_payload(projected_roi),
                     'rgb_bbox': None,
@@ -636,6 +817,7 @@ class AnimalYoloDetector(Node):
                 'class_name': class_name,
                 'category': category,
                 'confidence': round(score, 6),
+                'rgb_roi_height_px': round(roi_height, 1),
                 'thermal_bbox': self._box_payload(thermal_box),
                 'projected_rgb_roi': self._box_payload(projected_roi),
                 'rgb_bbox': self._box_payload(record['box']),
@@ -687,6 +869,12 @@ class AnimalYoloDetector(Node):
             projected_rois,
             matched_records,
             candidate_ids,
+            result_items,
+            title=(
+                f'Verifying frame {self.verification_frames_seen + 1}/'
+                f'{self._verification_frame_target()}'
+                if self.verification_active else 'Thermal + YOLO'
+            ),
         )
         return labels, annotated, result_items, matched_records
 
@@ -699,11 +887,16 @@ class AnimalYoloDetector(Node):
         matched_records: List[Optional[Dict[str, object]]],
     ):
         """Accumulate one vote per thermal candidate from one fresh RGB frame."""
+        frame_index = self.verification_frames_seen + 1
         for item, record in zip(result_items, matched_records):
             candidate_id = str(item['candidate_id'])
             self.verification_votes.setdefault(candidate_id, [])
+            self.verification_status_counts.setdefault(candidate_id, Counter())[
+                str(item['status'])
+            ] += 1
             if item['status'] != 'classified' or record is None:
                 continue
+            self.verification_last_match[candidate_id] = (frame_index, record)
             self.verification_votes[candidate_id].append({
                 'class_name': str(item['class_name']),
                 'category': str(item['category']),
@@ -778,10 +971,24 @@ class AnimalYoloDetector(Node):
                 'vote_summary': vote_summary,
             }
             if winning_class is None or len(winning_votes) < required_votes:
+                # Most frequent reason this source got no class. Ties go to
+                # "too far" / "partial": both mean "look again from closer".
+                statuses = self.verification_status_counts.get(candidate_id, Counter())
+                reason = max(
+                    ('too_far', 'partial', 'unresolved'),
+                    key=lambda name: (statuses.get(name, 0), name != 'unresolved'),
+                )
+                if statuses.get(reason, 0) == 0:
+                    reason = 'unresolved'
+                class_names = {
+                    'too_far': 'too_far_to_classify',
+                    'partial': 'partial_view',
+                    'unresolved': 'unknown_heat_source',
+                }
                 result_items.append({
                     **common,
-                    'status': 'unresolved',
-                    'class_name': 'unknown_heat_source',
+                    'status': reason,
+                    'class_name': class_names[reason],
                     'category': 'unknown',
                     'confidence': 0.0,
                     'agreement': round(
@@ -793,7 +1000,7 @@ class AnimalYoloDetector(Node):
                 representative_records.append(None)
                 provisional = winning_class or 'no_match'
                 log_items.append(
-                    f'{candidate_id}=unresolved '
+                    f'{candidate_id}={reason} '
                     f'({provisional} {len(winning_votes)}/{frame_count} votes)'
                 )
                 continue
@@ -884,11 +1091,26 @@ class AnimalYoloDetector(Node):
             self._payload_box(item.get('projected_rgb_roi'))
             for item in result_items
         ]
+        # Draw YOLO boxes from the final frame only: a box kept from an older
+        # frame would sit beside the animal if the robot has moved since.
+        display_records: List[Optional[Dict[str, object]]] = []
+        for item in result_items:
+            last = self.verification_last_match.get(str(item['candidate_id']))
+            if (
+                item['status'] == 'classified'
+                and last is not None
+                and last[0] == frame_count
+            ):
+                display_records.append(last[1])
+            else:
+                display_records.append(None)
         annotated = self._annotate_thermal_result(
             image_bgr,
             projected_rois,
-            representative_records,
+            display_records,
             self.verification_candidate_ids,
+            result_items,
+            title=f'Result after {frame_count} RGB frames',
         )
         self.last_thermal_trigger_ns = self.get_clock().now().nanoseconds
         self._reset_verification()
@@ -900,70 +1122,78 @@ class AnimalYoloDetector(Node):
         projected_rois: Sequence[Sequence[float]],
         matched_records: Sequence[Optional[Dict[str, object]]],
         candidate_ids: Optional[Sequence[str]] = None,
+        items: Optional[Sequence[Dict[str, object]]] = None,
+        title: Optional[str] = None,
     ):
-        annotated = image_bgr.copy()
-        native_classes = self.get_parameter('native_classes').value
-        exotic_classes = self.get_parameter('exotic_classes').value
+        """Draw short tags on the image and the full result in a legend.
 
-        for region_index, (roi, record) in enumerate(
-            zip(projected_rois, matched_records)
+        Orange box: hot region projected from the thermal camera.
+        Coloured box: the YOLO detection matched to it (green native,
+        blue exotic). The legend lists every hot region once:
+        ``H7 deer 0.87 EXOTIC 4/5``, ``H8 too far``, ``H9 no animal``.
+        """
+        annotated = image_bgr.copy()
+        height, width = annotated.shape[:2]
+        items = list(items) if items is not None else []
+        tags = []
+        for region_index in range(len(projected_rois)):
+            if candidate_ids is not None and region_index < len(candidate_ids):
+                tags.append(short_tag(str(candidate_ids[region_index])))
+            else:
+                tags.append(f'R{region_index + 1}')
+
+        legend_lines = []
+        if title:
+            legend_lines.append((title, None))
+        colours = []
+        for region_index, tag in enumerate(tags):
+            item = items[region_index] if region_index < len(items) else {}
+            status = str(item.get('status', 'unresolved'))
+            category = str(item.get('category', 'unknown'))
+            colour = colour_for_status(status, category)
+            colours.append(colour)
+            if status == 'classified':
+                text = (
+                    f'{tag} {item.get("class_name", "?")} '
+                    f'{float(item.get("confidence", 0.0)):.2f} {category.upper()}'
+                )
+                if 'frames_evaluated' in item:
+                    votes = sum(
+                        int(count)
+                        for name, count in dict(
+                            item.get('vote_summary', {})
+                        ).items()
+                        if name == item.get('class_name')
+                    )
+                    text += f' {votes}/{int(item["frames_evaluated"])}'
+            elif status == 'too_far':
+                text = f'{tag} too far to classify'
+            elif status == 'partial':
+                text = f'{tag} at thermal image edge'
+            else:
+                text = f'{tag} no animal match'
+            legend_lines.append((text, colour))
+        legend_rect = draw_legend(annotated, legend_lines, origin=(6, 6))
+
+        placer = LabelPlacer(width, height, reserved=[legend_rect])
+        visible = []
+        for roi, record, colour, tag in zip(
+            projected_rois,
+            matched_records,
+            colours,
+            tags,
         ):
             rx1, ry1, rx2, ry2 = [int(round(value)) for value in roi]
-            cv2.rectangle(annotated, (rx1, ry1), (rx2, ry2), (0, 165, 255), 2)
-            cv2.putText(
-                annotated,
-                'THERMAL '
-                + (
-                    str(candidate_ids[region_index])
-                    if candidate_ids is not None
-                    and region_index < len(candidate_ids)
-                    else f'ROI {region_index + 1}'
-                ),
-                (rx1, max(18, ry1 - 7)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.55,
-                (0, 165, 255),
-                2,
-                cv2.LINE_AA,
-            )
-
-            if record is None:
-                cv2.putText(
-                    annotated,
-                    'UNKNOWN HEAT SOURCE',
-                    (rx1, min(annotated.shape[0] - 8, ry2 + 22)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 0, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+            if rx2 <= rx1 and ry2 <= ry1:
+                # Not in this frame (listed in the legend only).
                 continue
-
-            x1, y1, x2, y2 = [
-                int(round(value)) for value in record['box']
-            ]
-            class_name = str(record['class_name'])
-            score = float(record['score'])
-            category = category_for_class(
-                class_name,
-                native_classes,
-                exotic_classes,
-            )
-            colour = (0, 200, 0) if category == 'native' else (255, 100, 0)
-            if category == 'unknown':
-                colour = (0, 0, 255)
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), colour, 3)
-            cv2.putText(
-                annotated,
-                f'{class_name} {score:.2f} [{category.upper()}]',
-                (x1, max(20, y1 - 8)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.65,
-                colour,
-                2,
-                cv2.LINE_AA,
-            )
+            cv2.rectangle(annotated, (rx1, ry1), (rx2, ry2), THERMAL_ROI_COLOUR, 1)
+            if record is not None:
+                x1, y1, x2, y2 = [int(round(value)) for value in record['box']]
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), colour, 2)
+            visible.append((record['box'] if record is not None else roi, colour, tag))
+        for anchor, colour, tag in visible:
+            draw_tag(annotated, placer, tag, anchor, colour)
         return annotated
 
     def _publish_error_result(

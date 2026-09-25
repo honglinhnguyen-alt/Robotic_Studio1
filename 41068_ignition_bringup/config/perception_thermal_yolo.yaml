@@ -17,11 +17,16 @@
     hot_threshold_k: 315.0
     min_hot_area_px: 30
     morphology_kernel_px: 3
-    persistence_frames: 2
-    # Each connected region must persist independently before it is published.
+    # R5: each hot region is tracked with a stable ID (heat_N) and must be
+    # seen in this many consecutive frames before it is published.
+    persistence_frames: 3
     tracking_iou_threshold: 0.20
-    tracking_max_missed_frames: 1
-    max_regions: 5
+    # Also match a region whose centre moved less than one box diagonal
+    # (small, distant blobs lose IoU quickly).
+    tracking_max_center_jump: 1.0
+    # A published track survives this many missing frames with the same ID.
+    tracking_max_missed_frames: 2
+    max_regions: 8
     publish_annotated_image: true
     log_period_sec: 2.0
 
@@ -41,7 +46,19 @@
     thermal_gate_enabled: true
     thermal_detections_topic: perception/thermal/detections
     thermal_retrigger_sec: 0.0
-    max_rgb_thermal_age_sec: 1.0
+    # Each RGB frame (3 Hz) is paired with the thermal frame (10 Hz) closest
+    # in time; pairs further apart than this are not used.
+    max_rgb_thermal_age_sec: 0.15
+    # Cancel a verification window after this many empty thermal frames.
+    thermal_empty_reset_frames: 3
+    thermal_buffer_sec: 2.0
+    # Skip verification frames while the robot turns faster than this
+    # [rad/s]: the two cameras would not show the same scene. 0 disables.
+    max_verification_yaw_rate: 0.35
+    odometry_topic: odometry
+    # A hot region shorter than this in the RGB image is reported as
+    # too_far (needs a closer look) instead of unknown_heat_source.
+    min_classify_height_px: 18.0
 
     # Do not make a mission decision from one image. Each thermal candidate is
     # classified only when the same YOLO class wins at least 3 of 5 RGB frames.
@@ -56,7 +73,9 @@
     thermal_roi_margin: 1.5
     thermal_rgb_offset_x_px: 0.0
     thermal_rgb_offset_y_px: 0.0
-    minimum_thermal_overlap: 0.05
+    # A YOLO box matches a hot region when the region centre lies inside the
+    # box (+20 %), or when they overlap by this fraction of the smaller box.
+    minimum_thermal_overlap: 0.5
 
     native_classes: [kangaroo]
     exotic_classes: [boar, deer]
