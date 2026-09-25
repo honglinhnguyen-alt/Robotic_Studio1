@@ -3,13 +3,21 @@
   <model name="boar">
     <static>true</static>
 
+    <!--
+      Scaled x1.3 so the Husky 2D lidar can see the boar.
+      The lidar scans one horizontal plane about 0.81 m above the ground.
+      At scale 1 the boar is only 0.76 m tall, so every beam passed over it.
+      At scale 1.3 it is 0.98 m tall and 1.74 m long, and the scan plane cuts
+      its back and head in a 0.52 x 1.27 m section.
+      Keep the visual and collision scales equal.
+    -->
     <link name="link">
     <visual name="visual">
 
       <geometry>
         <mesh>
           <uri>meshes/boar.dae</uri>
-          <scale>1 1 1</scale>
+          <scale>1.3 1.3 1.3</scale>
         </mesh>
       </geometry>
 
@@ -27,7 +35,7 @@
         <geometry>
           <mesh>
             <uri>meshes/boar.dae</uri>
-            <scale>1 1 1</scale>
+            <scale>1.3 1.3 1.3</scale>
           </mesh>
         </geometry>
       </collision>

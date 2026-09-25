@@ -21,6 +21,7 @@ install(
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
     scripts/animal_yolo_detector.py
+    scripts/capture_yolo_dataset.py
     scripts/thermal_candidate_detector.py
   DESTINATION lib/${PROJECT_NAME}
 )
