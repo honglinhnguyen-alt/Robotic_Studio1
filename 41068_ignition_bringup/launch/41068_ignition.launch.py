@@ -369,9 +369,16 @@ def generate_launch_description():
         xacro_parts=['urdf_husky', 'husky.urdf.xacro'],
         bridge_config='gazebo_bridge_husky1.yaml',
         localization_config='robot_localization_husky1.yaml',
-        x='0.0',
-        y='0.0',
+        # x='0.0',
+        # y='0.0',
+        # z='0.4',
+
+        #Luke's test 1
+        x='-5.576',
+        y='-2.120',
         z='0.4',
+        yaw='2.334',
+
         spawn_delay=3.0,
         stop_turn_go=True,
     )

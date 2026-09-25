@@ -12,9 +12,17 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'use_sim_time': True,
-                'goal_x': 4.2,
-                'goal_y': 0.0,
-                'goal_yaw': 0.0,
+                
+                #box test
+                # 'goal_x': 4.2,
+                # 'goal_y': 0.0,
+                # 'goal_yaw': 0.0,
+
+                #tree test
+                'goal_x': -9.551,
+                'goal_y': 0.697,
+                'goal_yaw': 2.525,
+
                 'map_frame': 'husky1_map',
             }],
             remappings=[
