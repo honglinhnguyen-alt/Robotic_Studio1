@@ -12,18 +12,11 @@
     </plugin>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu">
     </plugin>
-    <!-- Basic world setup -->
     <light name="sun" type="directional">
       <cast_shadows>0</cast_shadows>
       <pose>0 0 100 0 -0 0</pose>
       <diffuse>0.8 0.8 0.8 1</diffuse>
       <specular>0.8 0.8 0.8 1</specular>
-      <!-- <attenuation>
-        <range>1000</range>
-        <constant>0.9</constant>
-        <linear>0.01</linear>
-        <quadratic>0.001</quadratic>
-      </attenuation> -->
       <direction>-0.5 0.1 -0.9</direction>
       <intensity>5</intensity>
     </light>
@@ -44,7 +37,6 @@
       <shadows>0</shadows>
       <grid>0</grid>
     </scene>
-    <!-- Initialise spherical coordinates somewhere -->
     <spherical_coordinates>
       <latitude_deg>0.0</latitude_deg>
       <longitude_deg>0.0</longitude_deg>
@@ -52,2667 +44,21 @@
       <heading_deg>0</heading_deg>
       <surface_model>EARTH_WGS84</surface_model>
     </spherical_coordinates>
-    <!-- Dense forest with an irregular circular rock perimeter; no forest_wall. -->
-    <!-- Use the asset model.sdf scale 0.6 0.6 0.3, with no extra scale here. -->
-    <!-- Includes inherit collisions from the assets; this file adds no collision geometry. -->
-    <!-- ========================================================= -->
-    <!-- Dense forest with an irregular circular rock perimeter; no forest_wall. -->
-    <!-- ========================================================= -->
     <include>
       <uri>model://forest_plane</uri>
       <name>forest_plane</name>
       <pose>0 0 0 0 0 0</pose>
     </include>
-    <!-- ========================================================= -->
-    <!-- ANIMAL POPULATION: 10 OF EACH SPECIES -->
-    <!-- ========================================================= -->
-    <!-- FEMALE DEER x10 -->
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_01</name>
-      <pose>-18 12 0 0 0 0.3</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_02</name>
-      <pose>-12 17 0 0 0 -1.1</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_03</name>
-      <pose>-5 19 0 0 0 2.4</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_04</name>
-      <pose>6 18 0 0 0 -2.0</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_05</name>
-      <pose>15 14 0 0 0 1.2</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_06</name>
-      <pose>19 5 0 0 0 -0.7</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_07</name>
-      <pose>15 -10 0 0 0 2.8</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_08</name>
-      <pose>5 -17 0 0 0 -1.6</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_09</name>
-      <pose>-7 -18 0 0 0 0.9</pose>
-    </include>
-    <include>
-      <uri>model://female_deer</uri>
-      <name>female_deer_10</name>
-      <pose>-17 -9 0 0 0 -2.5</pose>
-    </include>
-    <!-- MALE DEER x10 -->
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_01</name>
-      <pose>-20 5 0 0 0 -0.4</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_02</name>
-      <pose>-15 14 0 0 0 1.8</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_03</name>
-      <pose>-8 11 0 0 0 -2.7</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_04</name>
-      <pose>2 16 0 0 0 0.6</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_05</name>
-      <pose>11 18 0 0 0 -1.3</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_06</name>
-      <pose>18 10 0 0 0 2.2</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_07</name>
-      <pose>18 -4 0 0 0 -2.0</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_08</name>
-      <pose>10 -15 0 0 0 1.0</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_09</name>
-      <pose>-3 -16 0 0 0 -0.8</pose>
-    </include>
-    <include>
-      <uri>model://male_deer</uri>
-      <name>male_deer_10</name>
-      <pose>-14 -14 0 0 0 2.7</pose>
-    </include>
-    <!-- KANGAROOS x10 -->
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_01</name>
-      <pose>-16 8 0 0 0 1.4</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_02</name>
-      <pose>-10 15 0 0 0 -2.3</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_03</name>
-      <pose>-2 12 0 0 0 0.2</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_04</name>
-      <pose>8 13 0 0 0 2.6</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_05</name>
-      <pose>16 8 0 0 0 -1.0</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_06</name>
-      <pose>20 0 0 0 0 1.9</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_07</name>
-      <pose>13 -12 0 0 0 -2.8</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_08</name>
-      <pose>3 -19 0 0 0 0.8</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_09</name>
-      <pose>-9 -13 0 0 0 2.1</pose>
-    </include>
-    <include>
-      <uri>model://kangaroo</uri>
-      <name>kangaroo_10</name>
-      <pose>-19 -3 0 0 0 -1.7</pose>
-    </include>
-    <!-- BOARS x10 -->
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_01</name>
-      <pose>-13 6 0 0 0 -2.0</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_02</name>
-      <pose>-6 14 0 0 0 1.1</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_03</name>
-      <pose>4 10 0 0 0 -0.5</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_04</name>
-      <pose>13 6 0 0 0 2.9</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_05</name>
-      <pose>17 -2 0 0 0 -1.2</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_06</name>
-      <pose>9 -8 0 0 0 0.4</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_07</name>
-      <pose>1 -12 0 0 0 2.3</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_08</name>
-      <pose>-8 -9 0 0 0 -2.6</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_09</name>
-      <pose>-15 -5 0 0 0 0.7</pose>
-    </include>
-    <include>
-      <uri>model://boar</uri>
-      <name>boar_10</name>
-      <pose>-20 2 0 0 0 1.6</pose>
-    </include>
-    <!-- <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/platypus</uri>
-      <name>platypus1</name>
-      <pose>-8 6 0 0 0 0</pose>
-    </include> -->
-    <!-- <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%201</uri>
-      <name>rock1</name>
-      <pose>-6.30926 -8.38159 0 0 0 0</pose>
-    </include>
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%202</uri>
-      <name>rock2</name>
-      <pose>-8.27162 -6.19647 0 0 0 0</pose>
-    </include>
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%203</uri>
-      <name>rock3</name>
-      <pose>-9.2841 -4.61803 0 0 0 0</pose>
-    </include>
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%204</uri>
-      <name>rock4</name>
-      <pose>-10 -12 0 0 0 0</pose>
-    </include>
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%205</uri>
-      <name>rock5</name>
-      <pose>-12 -12 0 0 0 0</pose>
-    </include>
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Falling%20Rock%206</uri>
-      <name>rock6</name>
-      <pose>-14 -12 0 0 0 0</pose>
-    </include> -->
     <include>
       <uri>model://tent</uri>
       <name>tent1</name>
       <pose>-9 -6 0 0 0 0.5</pose>
     </include>
-    <!-- Moved from (-7, -6) to (-6.5, -6): the campfire model is now scaled x1.8,
-         and at the old position its logs went into the tent wall. -->
     <include>
       <uri>model://campfire</uri>
       <name>campfire1</name>
       <pose>-6.5 -6 0 0 0 0</pose>
     </include>
-    <!-- ========================================================= -->
-    <!-- SCATTERED INTERIOR ROCKS -->
-    <!-- ========================================================= -->
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_01</name>
-      <pose>-24 8 0 0 0 0.3</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_02</name>
-      <pose>-20 -13 0 0 0 -0.9</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_03</name>
-      <pose>-15 19 0 0 0 1.7</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_04</name>
-      <pose>-11 -23 0 0 0 0.55</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_05</name>
-      <pose>-4 25 0 0 0 -1.25</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_06</name>
-      <pose>3 -22 0 0 0 2.2</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_07</name>
-      <pose>8 23 0 0 0 0.95</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_08</name>
-      <pose>14 -19 0 0 0 -2.35</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_09</name>
-      <pose>19 16 0 0 0 1.25</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_10</name>
-      <pose>23 -9 0 0 0 -0.25</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_11</name>
-      <pose>26 5 0 0 0 2.75</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_12</name>
-      <pose>-26 -5 0 0 0 1.05</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_13</name>
-      <pose>-17 -2 0 0 0 -2.1</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_14</name>
-      <pose>16 3 0 0 0 0.45</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_15</name>
-      <pose>5 14 0 0 0 -1.85</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_16</name>
-      <pose>-8 -16 0 0 0 2.6</pose>
-    </include>
-    <include>
-      <uri>model://rock_1</uri>
-      <name>forest_scatter_rock_17</name>
-      <pose>12 11 0 0 0 -0.7</pose>
-    </include>
-    <include>
-      <uri>model://rock_2</uri>
-      <name>forest_scatter_rock_18</name>
-      <pose>-12 12 0 0 0 1.95</pose>
-    </include>
-
-    <!-- ========================================================= -->
-    <!-- ACTIVE FOREST: legacy dense layout, selected tree models only -->
-    <!-- Reuses the old 180 tree positions, including the centre. -->
-    <!-- Models are cycled through 01, 02, 05, 08 and autumn_tree. -->
-    <!-- ========================================================= -->
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_001</name>
-      <pose>-10.312 10.177 0 0 0 1.3597</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_002</name>
-      <pose>-8.459 3.982 0 0 0 -1.7419</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_003</name>
-      <pose>-1.859 7.597 0 0 0 2.3365</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_004</name>
-      <pose>-4.165 -11.75 0 0 0 -2.3248</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_005</name>
-      <pose>-10.421 -2.543 0 0 0 -1.0112</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_006</name>
-      <pose>8.18 -0.992 0 0 0 -1.0733</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_007</name>
-      <pose>8.717 -8.326 0 0 0 -1.4967</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_008</name>
-      <pose>10.327 3.629 0 0 0 1.9586</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_009</name>
-      <pose>-0.816 4.203 0 0 0 0.7906</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_010</name>
-      <pose>0.813 -11.703 0 0 0 1.5804</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_011</name>
-      <pose>-10.362 -9.252 0 0 0 -2.8067</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_012</name>
-      <pose>-7.141 -0.309 0 0 0 0.8477</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_013</name>
-      <pose>4.991 -4.294 0 0 0 -2.0018</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_014</name>
-      <pose>-5.837 9.364 0 0 0 1.3637</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_015</name>
-      <pose>2.208 10.188 0 0 0 0.585</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_016</name>
-      <pose>7.307 5.794 0 0 0 2.0578</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_017</name>
-      <pose>5.763 2.723 0 0 0 2.5738</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_018</name>
-      <pose>1.819 6.296 0 0 0 -2.0938</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_019</name>
-      <pose>-11.556 1.455 0 0 0 1.6079</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_020</name>
-      <pose>0.729 -6.591 0 0 0 -0.9212</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_021</name>
-      <pose>1.644 -1.966 0 0 0 0.5922</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_022</name>
-      <pose>-3.895 -5.641 0 0 0 2.8952</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_023</name>
-      <pose>8.879 11.241 0 0 0 0.9158</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_024</name>
-      <pose>4.017 -9.207 0 0 0 0.5243</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_025</name>
-      <pose>11.363 -4.359 0 0 0 -1.1905</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_026</name>
-      <pose>-11.653 5.107 0 0 0 -1.1882</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_027</name>
-      <pose>-3.149 11.226 0 0 0 -0.2665</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_028</name>
-      <pose>10.772 7.217 0 0 0 -2.4574</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_029</name>
-      <pose>-3.517 0.187 0 0 0 3.1194</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_030</name>
-      <pose>-7.104 -9.957 0 0 0 2.6956</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_031</name>
-      <pose>9.267 -11.68 0 0 0 1.5227</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_032</name>
-      <pose>11.201 -0.808 0 0 0 -2.9987</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_033</name>
-      <pose>4.879 -0.616 0 0 0 1.0957</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_034</name>
-      <pose>-1.928 -8.767 0 0 0 2.121</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_035</name>
-      <pose>5.611 8.756 0 0 0 0.1323</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_036</name>
-      <pose>-4.523 6.22 0 0 0 -2.7375</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_037</name>
-      <pose>11.516 -8.706 0 0 0 -1.6878</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_038</name>
-      <pose>-7.152 -3.952 0 0 0 -1.5618</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_039</name>
-      <pose>-24.17 2.992 0.0 0.0 0.0 -2.8498</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_040</name>
-      <pose>-15.546 -20.045 0 0 0 1.3374</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_041</name>
-      <pose>17.74 -1.276 0 0 0 1.1451</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_042</name>
-      <pose>-10.405 -19.563 0.0 0.0 0.0 2.9664</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_043</name>
-      <pose>12.858 16.877 0.0 0.0 0.0 2.6237</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_044</name>
-      <pose>-6.893 -19.509 0.0 0.0 0.0 2.8407</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_045</name>
-      <pose>-13.984 -9.873 0 0 0 -1.7552</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_046</name>
-      <pose>-25.074 6.181 0 0 0 0.1393</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_047</name>
-      <pose>10.808 -16.996 0.0 0.0 0.0 -0.125</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_048</name>
-      <pose>6.17 -22.734 0 0 0 -0.0488</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_049</name>
-      <pose>-14.53 18.187 0 0 0 2.5029</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_050</name>
-      <pose>12.056 -19.187 0 0 0 0.3962</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_051</name>
-      <pose>-19.066 10.757 0 0 0 1.0929</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_052</name>
-      <pose>15.395 14.028 0.0 0.0 0.0 -3.0565</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_053</name>
-      <pose>-15.302 -0.494 0 0 0 -0.5017</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_054</name>
-      <pose>17.198 12.512 0 0 0 3.1101</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_055</name>
-      <pose>-4.901 17.955 0 0 0 1.0667</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_056</name>
-      <pose>-25.34 -4.203 0.0 0.0 0.0 2.0607</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_057</name>
-      <pose>-22.856 12.357 0 0 0 1.5114</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_058</name>
-      <pose>-24.757 -0.49 0 0 0 -3.0063</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_059</name>
-      <pose>-0.599 23.98 0.0 0.0 0.0 2.8042</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_060</name>
-      <pose>-7.147 -14.474 0 0 0 2.149</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_061</name>
-      <pose>19.651 -8.63 0.0 0.0 0.0 -2.7778</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_062</name>
-      <pose>-24.469 10.453 0.0 0.0 0.0 -2.3461</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_063</name>
-      <pose>20.379 -16.346 0.0 0.0 0.0 -3.0146</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_064</name>
-      <pose>-8.996 -17.824 0 0 0 -1.4249</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_065</name>
-      <pose>12.445 -14.801 0 0 0 2.3971</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_066</name>
-      <pose>-14.288 20.464 0.0 0.0 0.0 0.231</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_067</name>
-      <pose>-6.415 24.902 0.0 0.0 0.0 -0.624</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_068</name>
-      <pose>17.516 8.548 0.0 0.0 0.0 -2.9946</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_069</name>
-      <pose>-10.557 23.19 0 0 0 1.545</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_070</name>
-      <pose>-3.537 -22.057 0 0 0 -0.0768</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_071</name>
-      <pose>-15.441 11.068 0.0 0.0 0.0 -1.9484</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_072</name>
-      <pose>-18.506 -5.504 0 0 0 0.8736</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_073</name>
-      <pose>25.691 9.083 0 0 0 3.0289</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_074</name>
-      <pose>3.366 -21.36 0.0 0.0 0.0 1.3133</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_075</name>
-      <pose>-17.008 -12.445 0.0 0.0 0.0 -0.7178</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_076</name>
-      <pose>5.497 22.513 0 0 0 2.3649</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_077</name>
-      <pose>12.051 14.359 0 0 0 -1.358</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_078</name>
-      <pose>14.847 -8.912 0 0 0 0.6361</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_079</name>
-      <pose>2.711 -25.548 0 0 0 1.212</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_080</name>
-      <pose>10.865 19.464 0.0 0.0 0.0 -1.9675</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_081</name>
-      <pose>2.813 -18.279 0 0 0 1.5619</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_082</name>
-      <pose>-1.643 20.417 0 0 0 -2.9652</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_083</name>
-      <pose>17.517 -16.812 0 0 0 0.6237</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_084</name>
-      <pose>9.745 17.265 0 0 0 2.9747</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_085</name>
-      <pose>20.62 7.825 0 0 0 -1.0005</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_086</name>
-      <pose>-17.463 -15.861 0 0 0 2.125</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_087</name>
-      <pose>20.167 -5.296 0 0 0 -0.5377</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_088</name>
-      <pose>-8.527 18.57 0 0 0 -1.9295</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_089</name>
-      <pose>5.192 15.472 0 0 0 1.5145</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_090</name>
-      <pose>-14.063 8.736 0 0 0 0.5246</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_091</name>
-      <pose>18.08 -4.932 0.0 0.0 0.0 -0.8186</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_092</name>
-      <pose>-16.302 15.737 0.0 0.0 0.0 -0.2439</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_093</name>
-      <pose>14.35 -3.309 0.0 0.0 0.0 1.0119</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_094</name>
-      <pose>15.939 -4.592 0 0 0 -0.8774</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_095</name>
-      <pose>-8.395 -21.601 0 0 0 0.5743</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_096</name>
-      <pose>23.329 -11.282 0 0 0 0.3721</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_097</name>
-      <pose>-17.149 14.016 0 0 0 0.6416</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_098</name>
-      <pose>-13.189 -19.231 0.0 0.0 0.0 -0.033</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_099</name>
-      <pose>-13.122 -16.028 0 0 0 -1.1045</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_100</name>
-      <pose>-19.041 -11.656 0 0 0 -0.9204</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_101</name>
-      <pose>15.122 -15.329 0 0 0 -2.5923</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_102</name>
-      <pose>16.269 7.174 0 0 0 0.4577</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_103</name>
-      <pose>10.348 -25.39 0 0 0 0.0902</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_104</name>
-      <pose>1.632 22.011 0 0 0 2.8151</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_105</name>
-      <pose>12.988 21.018 0.0 0.0 0.0 -1.3949</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_106</name>
-      <pose>8.249 -20.236 0.0 0.0 0.0 -2.0262</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_107</name>
-      <pose>-3.918 -18.38 0 0 0 2.3081</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_108</name>
-      <pose>2.963 26.025 0.0 0.0 0.0 -0.3778</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_109</name>
-      <pose>-8.82 26.76 0 0 0 -1.6205</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_110</name>
-      <pose>0.982 -23.713 0.0 0.0 0.0 -0.4868</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_111</name>
-      <pose>16.709 3.551 0.0 0.0 0.0 -1.5997</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_112</name>
-      <pose>22.052 -8.902 0.0 0.0 0.0 -2.8415</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_113</name>
-      <pose>-20.051 1.014 0 0 0 2.6183</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_114</name>
-      <pose>-8.526 24.433 0.0 0.0 0.0 -1.2321</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_115</name>
-      <pose>7.061 14.095 0.0 0.0 0.0 2.8914</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_116</name>
-      <pose>14.75 11.692 0.0 0.0 0.0 -0.6722</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_117</name>
-      <pose>-21.651 -9.0 0.0 0.0 0.0 -0.1991</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_118</name>
-      <pose>19.121 -12.34 0.0 0.0 0.0 0.2371</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_119</name>
-      <pose>6.041 -16.925 0 0 0 0.4535</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_120</name>
-      <pose>-15.54 6.116 0 0 0 0.9737</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_121</name>
-      <pose>-19.328 -1.156 0.0 0.0 0.0 1.9197</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_122</name>
-      <pose>-10.105 -22.865 0.0 0.0 0.0 -1.4151</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_123</name>
-      <pose>-17.193 -2.218 0.0 0.0 0.0 -0.9528</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_124</name>
-      <pose>-27.453 -3.97 0 0 0 -1.7623</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_125</name>
-      <pose>-16.138 20.534 0.0 0.0 0.0 -2.0937</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_126</name>
-      <pose>-16.983 3.368 0 0 0 -1.3218</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_127</name>
-      <pose>18.865 5.759 0.0 0.0 0.0 -2.3709</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_128</name>
-      <pose>20.047 -0.336 0.0 0.0 0.0 1.548</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_129</name>
-      <pose>23.307 -3.272 0 0 0 -0.6875</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_130</name>
-      <pose>-21.904 -4.437 0 0 0 0.499</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_131</name>
-      <pose>-19.263 -8.461 0 0 0 -1.4618</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_132</name>
-      <pose>-5.072 -15.951 0.0 0.0 0.0 -1.1146</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_133</name>
-      <pose>22.844 1.841 0 0 0 2.066</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_134</name>
-      <pose>-1.366 -15.592 0 0 0 -1.5253</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_135</name>
-      <pose>26.637 1.264 0 0 0 -0.2591</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_136</name>
-      <pose>16.714 0.51 0.0 0.0 0.0 -1.6609</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_137</name>
-      <pose>24.693 5.928 0 0 0 -1.4058</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_138</name>
-      <pose>-2.361 -25.816 0 0 0 -2.4252</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_139</name>
-      <pose>-4.052 26.156 0 0 0 1.0612</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_140</name>
-      <pose>14.185 4.296 0 0 0 -2.6247</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_141</name>
-      <pose>10.353 -21.4 0 0 0 2.455</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_142</name>
-      <pose>5.143 19.581 0.0 0.0 0.0 1.7263</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_143</name>
-      <pose>2.799 19.234 0.0 0.0 0.0 1.528</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_144</name>
-      <pose>14.997 -13.266 0.0 0.0 0.0 -2.7457</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_145</name>
-      <pose>-7.489 13.038 0 0 0 1.5779</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_146</name>
-      <pose>-23.729 -8.268 0.0 0.0 0.0 2.4576</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_147</name>
-      <pose>-0.705 13.268 0 0 0 1.9151</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_148</name>
-      <pose>10.554 -14.767 0.0 0.0 0.0 -1.2768</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_149</name>
-      <pose>6.758 18.762 0.0 0.0 0.0 -0.0458</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_150</name>
-      <pose>13.762 9.884 0 0 0 -0.1899</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_151</name>
-      <pose>-15.196 -6.318 0 0 0 0.3523</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_152</name>
-      <pose>-4.095 22.336 0.0 0.0 0.0 -3.1346</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_153</name>
-      <pose>-17.885 0.292 0.0 0.0 0.0 -3.0113</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_154</name>
-      <pose>-7.183 23.222 0 0 0 0.1227</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_155</name>
-      <pose>20.058 3.44 0 0 0 1.2211</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_156</name>
-      <pose>-13.119 -21.205 0.0 0.0 0.0 2.3083</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_157</name>
-      <pose>18.396 -9.965 0 0 0 0.2447</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_158</name>
-      <pose>-13.08 13.969 0 0 0 0.4993</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_159</name>
-      <pose>-0.002 -20.692 0 0 0 -2.514</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_160</name>
-      <pose>-13.549 22.51 0.0 0.0 0.0 -1.418</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_161</name>
-      <pose>9.122 20.872 0 0 0 -2.9069</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_162</name>
-      <pose>-18.913 -19.625 0 0 0 2.9949</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_163</name>
-      <pose>-18.584 17.918 0 0 0 -3.1077</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_164</name>
-      <pose>6.081 -10.641 0.0 0.0 0.0 1.4997</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_165</name>
-      <pose>-0.409 -25.293 0.0 0.0 0.0 1.4299</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_166</name>
-      <pose>-1.483 16.136 0 0 0 -3.0684</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_167</name>
-      <pose>14.005 0.869 0 0 0 -0.4623</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_168</name>
-      <pose>-20.199 6.361 0 0 0 1.727</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_169</name>
-      <pose>0.803 -17.28 0.0 0.0 0.0 -0.1503</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_170</name>
-      <pose>21.842 11.393 0 0 0 -0.3118</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_171</name>
-      <pose>21.891 4.66 0.0 0.0 0.0 0.3751</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_172</name>
-      <pose>-10.988 16.606 0 0 0 -2.073</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_173</name>
-      <pose>2.562 -15.272 0 0 0 0.0579</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_174</name>
-      <pose>25.778 12.6 0 0 0 0.1124</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_175</name>
-      <pose>-22.202 -11.067 0 0 0 1.3391</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>active_forest_tree_176</name>
-      <pose>-10.858 20.3 0 0 0 -2.1987</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>active_forest_tree_177</name>
-      <pose>8.784 -17.94 0 0 0 2.2683</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>active_forest_tree_178</name>
-      <pose>-16.875 -18.299 0.0 0.0 0.0 1.0547</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>active_forest_tree_179</name>
-      <pose>-18.125 7.527 0.0 0.0 0.0 -0.6828</pose>
-    </include>
-    <include>
-      <uri>model://autumn_tree</uri>
-      <name>active_forest_tree_180</name>
-      <pose>9.674 -28.832 0.0 0.0 0.0 -0.3102</pose>
-    </include>
-    <!-- DENSE BACKGROUND TREES - mixed irregular groves including the centre -->
-    <!-- ========================================================= -->
-    <!-- <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_001</name>
-      <pose>-10.312 10.177 0 0 0 1.3597</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_002</name>
-      <pose>-8.459 3.982 0 0 0 -1.7419</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_001</name>
-      <pose>-1.859 7.597 0 0 0 2.3365</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_001</name>
-      <pose>-4.165 -11.75 0 0 0 -2.3248</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_001</name>
-      <pose>-10.421 -2.543 0 0 0 -1.0112</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_001</name>
-      <pose>8.18 -0.992 0 0 0 -1.0733</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_002</name>
-      <pose>8.717 -8.326 0 0 0 -1.4967</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_001</name>
-      <pose>10.327 3.629 0 0 0 1.9586</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_001</name>
-      <pose>-0.816 4.203 0 0 0 0.7906</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_003</name>
-      <pose>0.813 -11.703 0 0 0 1.5804</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_002</name>
-      <pose>-10.362 -9.252 0 0 0 -2.8067</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_002</name>
-      <pose>-7.141 -0.309 0 0 0 0.8477</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_003</name>
-      <pose>4.991 -4.294 0 0 0 -2.0018</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_002</name>
-      <pose>-5.837 9.364 0 0 0 1.3637</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_004</name>
-      <pose>2.208 10.188 0 0 0 0.585</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_002</name>
-      <pose>7.307 5.794 0 0 0 2.0578</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_003</name>
-      <pose>5.763 2.723 0 0 0 2.5738</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_003</name>
-      <pose>1.819 6.296 0 0 0 -2.0938</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_004</name>
-      <pose>-11.556 1.455 0 0 0 1.6079</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_003</name>
-      <pose>0.729 -6.591 0 0 0 -0.9212</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_004</name>
-      <pose>1.644 -1.966 0 0 0 0.5922</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_005</name>
-      <pose>-3.895 -5.641 0 0 0 2.8952</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_001</name>
-      <pose>8.879 11.241 0 0 0 0.9158</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_003</name>
-      <pose>4.017 -9.207 0 0 0 0.5243</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_005</name>
-      <pose>11.363 -4.359 0 0 0 -1.1905</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_005</name>
-      <pose>-11.653 5.107 0 0 0 -1.1882</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_006</name>
-      <pose>-3.149 11.226 0 0 0 -0.2665</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_004</name>
-      <pose>10.772 7.217 0 0 0 -2.4574</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_005</name>
-      <pose>-3.517 0.187 0 0 0 3.1194</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_004</name>
-      <pose>-7.104 -9.957 0 0 0 2.6956</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_006</name>
-      <pose>9.267 -11.68 0 0 0 1.5227</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_006</name>
-      <pose>11.201 -0.808 0 0 0 -2.9987</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_007</name>
-      <pose>4.879 -0.616 0 0 0 1.0957</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_004</name>
-      <pose>-1.928 -8.767 0 0 0 2.121</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_007</name>
-      <pose>5.611 8.756 0 0 0 0.1323</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_008</name>
-      <pose>-4.523 6.22 0 0 0 -2.7375</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_005</name>
-      <pose>11.516 -8.706 0 0 0 -1.6878</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_005</name>
-      <pose>-7.152 -3.952 0 0 0 -1.5618</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_007</name>
-      <pose>-24.17 2.992 0.0 0.0 0.0 -2.8498</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_006</name>
-      <pose>-15.546 -20.045 0 0 0 1.3374</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_008</name>
-      <pose>17.74 -1.276 0 0 0 1.1451</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_002</name>
-      <pose>-10.405 -19.563 0.0 0.0 0.0 2.9664</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_009</name>
-      <pose>12.858 16.877 0.0 0.0 0.0 2.6237</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_008</name>
-      <pose>-6.893 -19.509 0.0 0.0 0.0 2.8407</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_006</name>
-      <pose>-13.984 -9.873 0 0 0 -1.7552</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_007</name>
-      <pose>-25.074 6.181 0 0 0 0.1393</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_008</name>
-      <pose>10.808 -16.996 0.0 0.0 0.0 -0.125</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_009</name>
-      <pose>6.17 -22.734 0 0 0 -0.0488</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_010</name>
-      <pose>-14.53 18.187 0 0 0 2.5029</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_006</name>
-      <pose>12.056 -19.187 0 0 0 0.3962</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_009</name>
-      <pose>-19.066 10.757 0 0 0 1.0929</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_009</name>
-      <pose>15.395 14.028 0.0 0.0 0.0 -3.0565</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_007</name>
-      <pose>-15.302 -0.494 0 0 0 -0.5017</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_002</name>
-      <pose>17.198 12.512 0 0 0 3.1101</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_011</name>
-      <pose>-4.901 17.955 0 0 0 1.0667</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_008</name>
-      <pose>-25.34 -4.203 0.0 0.0 0.0 2.0607</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_007</name>
-      <pose>-22.856 12.357 0 0 0 1.5114</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_012</name>
-      <pose>-24.757 -0.49 0 0 0 -3.0063</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_013</name>
-      <pose>-0.599 23.98 0.0 0.0 0.0 2.8042</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_009</name>
-      <pose>-7.147 -14.474 0 0 0 2.149</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_014</name>
-      <pose>19.651 -8.63 0.0 0.0 0.0 -2.7778</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_008</name>
-      <pose>-24.469 10.453 0.0 0.0 0.0 -2.3461</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_010</name>
-      <pose>20.379 -16.346 0.0 0.0 0.0 -3.0146</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_010</name>
-      <pose>-8.996 -17.824 0 0 0 -1.4249</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_009</name>
-      <pose>12.445 -14.801 0 0 0 2.3971</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_015</name>
-      <pose>-14.288 20.464 0.0 0.0 0.0 0.231</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_010</name>
-      <pose>-6.415 24.902 0.0 0.0 0.0 -0.624</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_011</name>
-      <pose>17.516 8.548 0.0 0.0 0.0 -2.9946</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_016</name>
-      <pose>-10.557 23.19 0 0 0 1.545</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_003</name>
-      <pose>-3.537 -22.057 0 0 0 -0.0768</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_010</name>
-      <pose>-15.441 11.068 0.0 0.0 0.0 -1.9484</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_010</name>
-      <pose>-18.506 -5.504 0 0 0 0.8736</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_011</name>
-      <pose>25.691 9.083 0 0 0 3.0289</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_012</name>
-      <pose>3.366 -21.36 0.0 0.0 0.0 1.3133</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_017</name>
-      <pose>-17.008 -12.445 0.0 0.0 0.0 -0.7178</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_011</name>
-      <pose>5.497 22.513 0 0 0 2.3649</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_004</name>
-      <pose>12.051 14.359 0 0 0 -1.358</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_012</name>
-      <pose>14.847 -8.912 0 0 0 0.6361</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_005</name>
-      <pose>2.711 -25.548 0 0 0 1.212</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_018</name>
-      <pose>10.865 19.464 0.0 0.0 0.0 -1.9675</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_011</name>
-      <pose>2.813 -18.279 0 0 0 1.5619</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_012</name>
-      <pose>-1.643 20.417 0 0 0 -2.9652</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_012</name>
-      <pose>17.517 -16.812 0 0 0 0.6237</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_006</name>
-      <pose>9.745 17.265 0 0 0 2.9747</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_013</name>
-      <pose>20.62 7.825 0 0 0 -1.0005</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_003</name>
-      <pose>-17.463 -15.861 0 0 0 2.125</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_007</name>
-      <pose>20.167 -5.296 0 0 0 -0.5377</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_019</name>
-      <pose>-8.527 18.57 0 0 0 -1.9295</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_014</name>
-      <pose>5.192 15.472 0 0 0 1.5145</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_011</name>
-      <pose>-14.063 8.736 0 0 0 0.5246</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_013</name>
-      <pose>18.08 -4.932 0.0 0.0 0.0 -0.8186</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_015</name>
-      <pose>-16.302 15.737 0.0 0.0 0.0 -0.2439</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_020</name>
-      <pose>14.35 -3.309 0.0 0.0 0.0 1.0119</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_013</name>
-      <pose>15.939 -4.592 0 0 0 -0.8774</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_004</name>
-      <pose>-8.395 -21.601 0 0 0 0.5743</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_021</name>
-      <pose>23.329 -11.282 0 0 0 0.3721</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_022</name>
-      <pose>-17.149 14.016 0 0 0 0.6416</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_016</name>
-      <pose>-13.189 -19.231 0.0 0.0 0.0 -0.033</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_023</name>
-      <pose>-13.122 -16.028 0 0 0 -1.1045</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_024</name>
-      <pose>-19.041 -11.656 0 0 0 -0.9204</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_014</name>
-      <pose>15.122 -15.329 0 0 0 -2.5923</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_014</name>
-      <pose>16.269 7.174 0 0 0 0.4577</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_015</name>
-      <pose>10.348 -25.39 0 0 0 0.0902</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_017</name>
-      <pose>1.632 22.011 0 0 0 2.8151</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_013</name>
-      <pose>12.988 21.018 0.0 0.0 0.0 -1.3949</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_016</name>
-      <pose>8.249 -20.236 0.0 0.0 0.0 -2.0262</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_005</name>
-      <pose>-3.918 -18.38 0 0 0 2.3081</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_014</name>
-      <pose>2.963 26.025 0.0 0.0 0.0 -0.3778</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_018</name>
-      <pose>-8.82 26.76 0 0 0 -1.6205</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_017</name>
-      <pose>0.982 -23.713 0.0 0.0 0.0 -0.4868</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_025</name>
-      <pose>16.709 3.551 0.0 0.0 0.0 -1.5997</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_026</name>
-      <pose>22.052 -8.902 0.0 0.0 0.0 -2.8415</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_019</name>
-      <pose>-20.051 1.014 0 0 0 2.6183</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_018</name>
-      <pose>-8.526 24.433 0.0 0.0 0.0 -1.2321</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_020</name>
-      <pose>7.061 14.095 0.0 0.0 0.0 2.8914</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_021</name>
-      <pose>14.75 11.692 0.0 0.0 0.0 -0.6722</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_012</name>
-      <pose>-21.651 -9.0 0.0 0.0 0.0 -0.1991</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_027</name>
-      <pose>19.121 -12.34 0.0 0.0 0.0 0.2371</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_019</name>
-      <pose>6.041 -16.925 0 0 0 0.4535</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_020</name>
-      <pose>-15.54 6.116 0 0 0 0.9737</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_021</name>
-      <pose>-19.328 -1.156 0.0 0.0 0.0 1.9197</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_013</name>
-      <pose>-10.105 -22.865 0.0 0.0 0.0 -1.4151</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_022</name>
-      <pose>-17.193 -2.218 0.0 0.0 0.0 -0.9528</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_014</name>
-      <pose>-27.453 -3.97 0 0 0 -1.7623</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_006</name>
-      <pose>-16.138 20.534 0.0 0.0 0.0 -2.0937</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_023</name>
-      <pose>-16.983 3.368 0 0 0 -1.3218</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_024</name>
-      <pose>18.865 5.759 0.0 0.0 0.0 -2.3709</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_028</name>
-      <pose>20.047 -0.336 0.0 0.0 0.0 1.548</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_022</name>
-      <pose>23.307 -3.272 0 0 0 -0.6875</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_029</name>
-      <pose>-21.904 -4.437 0 0 0 0.499</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_023</name>
-      <pose>-19.263 -8.461 0 0 0 -1.4618</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_007</name>
-      <pose>-5.072 -15.951 0.0 0.0 0.0 -1.1146</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_024</name>
-      <pose>22.844 1.841 0 0 0 2.066</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_030</name>
-      <pose>-1.366 -15.592 0 0 0 -1.5253</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_025</name>
-      <pose>26.637 1.264 0 0 0 -0.2591</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_015</name>
-      <pose>16.714 0.51 0.0 0.0 0.0 -1.6609</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_031</name>
-      <pose>24.693 5.928 0 0 0 -1.4058</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_026</name>
-      <pose>-2.361 -25.816 0 0 0 -2.4252</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_025</name>
-      <pose>-4.052 26.156 0 0 0 1.0612</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_032</name>
-      <pose>14.185 4.296 0 0 0 -2.6247</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_027</name>
-      <pose>10.353 -21.4 0 0 0 2.455</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_016</name>
-      <pose>5.143 19.581 0.0 0.0 0.0 1.7263</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_015</name>
-      <pose>2.799 19.234 0.0 0.0 0.0 1.528</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_028</name>
-      <pose>14.997 -13.266 0.0 0.0 0.0 -2.7457</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_026</name>
-      <pose>-7.489 13.038 0 0 0 1.5779</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_029</name>
-      <pose>-23.729 -8.268 0.0 0.0 0.0 2.4576</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_030</name>
-      <pose>-0.705 13.268 0 0 0 1.9151</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_033</name>
-      <pose>10.554 -14.767 0.0 0.0 0.0 -1.2768</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_027</name>
-      <pose>6.758 18.762 0.0 0.0 0.0 -0.0458</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_017</name>
-      <pose>13.762 9.884 0 0 0 -0.1899</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_034</name>
-      <pose>-15.196 -6.318 0 0 0 0.3523</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_035</name>
-      <pose>-4.095 22.336 0.0 0.0 0.0 -3.1346</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_015</name>
-      <pose>-17.885 0.292 0.0 0.0 0.0 -3.0113</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_036</name>
-      <pose>-7.183 23.222 0 0 0 0.1227</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_03</uri>
-      <name>tree_background_03_028</name>
-      <pose>20.058 3.44 0 0 0 1.2211</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_031</name>
-      <pose>-13.119 -21.205 0.0 0.0 0.0 2.3083</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_04</uri>
-      <name>tree_background_04_018</name>
-      <pose>18.396 -9.965 0 0 0 0.2447</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_037</name>
-      <pose>-13.08 13.969 0 0 0 0.4993</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_008</name>
-      <pose>-0.002 -20.692 0 0 0 -2.514</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_032</name>
-      <pose>-13.549 22.51 0.0 0.0 0.0 -1.418</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_009</name>
-      <pose>9.122 20.872 0 0 0 -2.9069</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_016</name>
-      <pose>-18.913 -19.625 0 0 0 2.9949</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_033</name>
-      <pose>-18.584 17.918 0 0 0 -3.1077</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_034</name>
-      <pose>6.081 -10.641 0.0 0.0 0.0 1.4997</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_038</name>
-      <pose>-0.409 -25.293 0.0 0.0 0.0 1.4299</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_035</name>
-      <pose>-1.483 16.136 0 0 0 -3.0684</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_036</name>
-      <pose>14.005 0.869 0 0 0 -0.4623</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_017</name>
-      <pose>-20.199 6.361 0 0 0 1.727</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_037</name>
-      <pose>0.803 -17.28 0.0 0.0 0.0 -0.1503</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_08</uri>
-      <name>tree_background_08_010</name>
-      <pose>21.842 11.393 0 0 0 -0.3118</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_05</uri>
-      <name>tree_background_05_016</name>
-      <pose>21.891 4.66 0.0 0.0 0.0 0.3751</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_018</name>
-      <pose>-10.988 16.606 0 0 0 -2.073</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_039</name>
-      <pose>2.562 -15.272 0 0 0 0.0579</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_038</name>
-      <pose>25.778 12.6 0 0 0 0.1124</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_039</name>
-      <pose>-22.202 -11.067 0 0 0 1.3391</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_040</name>
-      <pose>-10.858 20.3 0 0 0 -2.1987</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_02</uri>
-      <name>tree_background_02_041</name>
-      <pose>8.784 -17.94 0 0 0 2.2683</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_07</uri>
-      <name>tree_background_07_008</name>
-      <pose>-16.875 -18.299 0.0 0.0 0.0 1.0547</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_01</uri>
-      <name>tree_background_01_040</name>
-      <pose>-18.125 7.527 0.0 0.0 0.0 -0.6828</pose>
-    </include>
-    <include>
-      <uri>model://tree_background_06</uri>
-      <name>tree_background_06_019</name>
-      <pose>9.674 -28.832 0.0 0.0 0.0 -0.3102</pose>
-    </include> -->
-    <!-- ========================================================= -->
-    <!-- UNDERGROWTH AND GRASS - clustered at tree bases and forest edges -->
-    <!-- ========================================================= -->
-    <!-- <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_001</name>
-      <pose>0.012 20.768 0 0 0 -2.4871</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_001</name>
-      <pose>22.578 8.158 0.0 0.0 0.0 1.2893</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_002</name>
-      <pose>-14.886 0.635 0 0 0 1.2181</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_001</name>
-      <pose>4.737 2.057 0 0 0 -2.5663</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_01</uri>
-      <name>plant_small_01_001</name>
-      <pose>-13.81 10.093 0 0 0 1.3867</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_01</uri>
-      <name>plant_small_01_002</name>
-      <pose>-19.59 -3.593 0.0 0.0 0.0 2.8803</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_002</name>
-      <pose>15.98 4.821 0 0 0 -1.693</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_003</name>
-      <pose>8.873 -0.322 0 0 0 0.7688</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_002</name>
-      <pose>13.066 -20.321 0 0 0 -0.8434</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_004</name>
-      <pose>9.72 21.66 0 0 0 0.9217</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_005</name>
-      <pose>8.556 12.071 0 0 0 1.9419</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_01</uri>
-      <name>plant_small_01_003</name>
-      <pose>-11.188 -13.86 0.0 0.0 0.0 1.4853</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_003</name>
-      <pose>0.044 3.734 0 0 0 -0.4989</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_003</name>
-      <pose>10.103 -0.302 0 0 0 0.3447</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_004</name>
-      <pose>18.241 -14.093 0.0 0.0 0.0 2.8496</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_004</name>
-      <pose>-24.129 -1.008 0 0 0 -0.6891</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_005</name>
-      <pose>-7.091 -28.798 0.0 0.0 0.0 0.9896</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_005</name>
-      <pose>-16.036 -14.558 0 0 0 0.7399</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_006</name>
-      <pose>-12.886 16.15 0.0 0.0 0.0 -2.1061</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_006</name>
-      <pose>-21.276 -12.869 0.0 0.0 0.0 -0.0683</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_006</name>
-      <pose>13.539 23.424 0 0 0 -0.3757</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_007</name>
-      <pose>8.75 2.792 0 0 0 -2.6534</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_007</name>
-      <pose>8.314 16.807 0 0 0 -2.832</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_008</name>
-      <pose>22.742 -2.602 0 0 0 2.2714</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_007</name>
-      <pose>7.085 23.541 0.0 0.0 0.0 2.7418</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_008</name>
-      <pose>16.337 -14.445 0 0 0 0.6287</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_008</name>
-      <pose>22.351 6.94 0.0 0.0 0.0 2.9628</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_009</name>
-      <pose>-9.811 12.662 0 0 0 -2.981</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_009</name>
-      <pose>-19.395 -4.982 0 0 0 2.6106</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_010</name>
-      <pose>-13.412 16.324 0 0 0 -1.0304</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_011</name>
-      <pose>-9.819 19.674 0 0 0 2.4346</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_012</name>
-      <pose>25.182 -5.781 0 0 0 -2.9625</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_010</name>
-      <pose>-23.014 0.414 0 0 0 0.4784</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_013</name>
-      <pose>26.134 9.781 0 0 0 1.0051</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_011</name>
-      <pose>-9.032 14.329 0.0 0.0 0.0 0.8358</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_014</name>
-      <pose>-21.102 -4.355 0 0 0 0.1018</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_015</name>
-      <pose>1.096 -15.226 0 0 0 0.1474</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_009</name>
-      <pose>-3.797 -19.34 0 0 0 -1.4453</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_010</name>
-      <pose>18.838 -15.317 0.0 0.0 0.0 -1.2294</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_012</name>
-      <pose>-12.252 18.906 0.0 0.0 0.0 2.619</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_013</name>
-      <pose>-5.709 -20.819 0 0 0 2.6234</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_01</uri>
-      <name>plant_small_01_004</name>
-      <pose>-14.909 16.472 0 0 0 -1.7881</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_011</name>
-      <pose>-1.27 19.696 0 0 0 -1.093</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_012</name>
-      <pose>7.451 11.399 0 0 0 3.0316</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_016</name>
-      <pose>-22.052 14.43 0 0 0 1.2006</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_017</name>
-      <pose>23.778 9.439 0 0 0 2.9574</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_018</name>
-      <pose>9.86 -18.171 0 0 0 2.7081</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_014</name>
-      <pose>-12.076 -0.835 0 0 0 2.3403</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_019</name>
-      <pose>14.541 8.66 0 0 0 -1.0039</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_020</name>
-      <pose>-10.77 4.633 0 0 0 -0.4926</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_015</name>
-      <pose>10.161 15.043 0 0 0 -1.3859</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_013</name>
-      <pose>14.678 16.582 0.0 0.0 0.0 -2.2738</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_021</name>
-      <pose>3.157 14.688 0 0 0 -2.7739</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_016</name>
-      <pose>-25.824 -1.137 0 0 0 -2.5961</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_014</name>
-      <pose>1.358 24.479 0 0 0 1.6815</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_02</uri>
-      <name>plant_small_02_017</name>
-      <pose>20.905 13.354 0 0 0 -2.1323</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_022</name>
-      <pose>-1.524 -21.93 0 0 0 -2.4587</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_04</uri>
-      <name>plant_small_04_023</name>
-      <pose>23.055 5.579 0 0 0 -2.9315</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_01</uri>
-      <name>plant_small_01_005</name>
-      <pose>27.168 8.205 0 0 0 1.8392</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_03</uri>
-      <name>plant_small_03_015</name>
-      <pose>18.99 1.38 0.0 0.0 0.0 3.0128</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_001</name>
-      <pose>-9.613 2.403 0 0 0 0.454</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_002</name>
-      <pose>-16.829 10.192 0 0 0 -0.2476</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_003</name>
-      <pose>8.353 -22.423 0 0 0 0.1413</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_004</name>
-      <pose>11.323 12.863 0 0 0 -2.0238</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_005</name>
-      <pose>-11.66 17.892 0 0 0 2.0525</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_006</name>
-      <pose>17.035 -3.265 0 0 0 0.8803</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_007</name>
-      <pose>13.685 -6.998 0 0 0 2.1163</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_008</name>
-      <pose>-17.062 13.013 0 0 0 -1.4839</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_009</name>
-      <pose>11.859 9.239 0 0 0 -2.8149</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_010</name>
-      <pose>-19.041 -10.16 0 0 0 1.5705</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_011</name>
-      <pose>1.774 8.918 0 0 0 -1.9001</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_012</name>
-      <pose>-4.163 -24.644 0 0 0 2.5651</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_013</name>
-      <pose>-6.206 21.317 0 0 0 -1.0969</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_014</name>
-      <pose>-22.139 -12.092 0 0 0 -1.5094</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_015</name>
-      <pose>7.253 21.714 0 0 0 -0.4272</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_016</name>
-      <pose>-19.449 3.427 0.0 0.0 0.0 0.7501</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_017</name>
-      <pose>10.095 24.387 0 0 0 3.0287</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_018</name>
-      <pose>-16.748 -0.637 0 0 0 -3.043</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_019</name>
-      <pose>20.387 -14.312 0 0 0 2.3108</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_020</name>
-      <pose>-4.178 19.515 0 0 0 1.1368</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_021</name>
-      <pose>-5.357 12.737 0 0 0 -0.1401</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_022</name>
-      <pose>10.705 1.392 0 0 0 1.7925</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_023</name>
-      <pose>-5.184 -26.998 0.0 0.0 0.0 2.342</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_024</name>
-      <pose>8.801 3.995 0 0 0 -0.8779</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_025</name>
-      <pose>-19.167 -18.318 0 0 0 1.7625</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_026</name>
-      <pose>-20.33 17.261 0.0 0.0 0.0 -1.2449</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_027</name>
-      <pose>2.52 16.963 0.0 0.0 0.0 1.1981</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_028</name>
-      <pose>2.155 -24.885 0 0 0 2.2684</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_029</name>
-      <pose>-20.044 -14.776 0.0 0.0 0.0 -0.7347</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_030</name>
-      <pose>15.45 -17.591 0.0 0.0 0.0 1.4531</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_031</name>
-      <pose>-25.252 1.684 0 0 0 1.7946</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_032</name>
-      <pose>-23.088 4.493 0.0 0.0 0.0 1.6863</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_033</name>
-      <pose>19.746 12.296 0 0 0 2.7346</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_034</name>
-      <pose>17.338 -23.774 0 0 0 -3.1285</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_035</name>
-      <pose>6.51 23.524 0 0 0 0.7843</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_036</name>
-      <pose>10.029 -20.6 0 0 0 -2.533</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_037</name>
-      <pose>13.659 14.477 0 0 0 0.0732</pose>
-    </include>
-    <include>
-      <uri>model://plant_small_05</uri>
-      <name>plant_small_05_038</name>
-      <pose>24.196 11.148 0 0 0 -0.1036</pose>
-    </include> -->
-    <!-- IRREGULAR ROCK RING: assets from husky_rockpack; model scales remain 1 1 1. -->
-    <!-- Ground-plane footprint checked; live Gazebo collision/navigation verification still required. -->
     <include>
       <uri>model://rock_cliff_05</uri>
       <name>perimeter_cliff_001</name>
@@ -2933,544 +279,584 @@
       <name>perimeter_cliff_044</name>
       <pose>36.859 -5.8756 -1.2042 0 0 7.835513</pose>
     </include>
-    <!-- <include>
-      <uri>model://rock_cliff_03</uri>
-      <name>perimeter_shelf_045</name>
-      <pose>26.1616 25.8807 -1.0 0 0 1.58</pose>
-    </include> -->
-    <!-- <include>
-      <uri>model://rock_cliff_04</uri>
-      <name>perimeter_shelf_046</name>
-      <pose>-25.6808 -26.3578 -1.0 0 0 4.74</pose>
-    </include> -->
-    <!-- <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_047</name>
-      <pose>41.2537 -3.3985 -1.6983 0 0 -0.497028</pose>
+    <!-- ===== DIFFICULT SCENARIO: generated by make_difficult_world.py ===== -->
+    <!-- ANIMALS x12 (5 boar exotic, 4 deer + 3 kangaroo native) -->
+    <!-- boar_01: pair A (boar-kangaroo ~1.5 m) -->
+    <include>
+      <uri>model://boar</uri>
+      <name>boar_01</name>
+      <pose>-13 6 0 0 0 -2</pose>
+    </include>
+    <!-- kangaroo_01: pair A -->
+    <include>
+      <uri>model://kangaroo</uri>
+      <name>kangaroo_01</name>
+      <pose>-13.5 7.4 0 0 0 1.4</pose>
+    </include>
+    <!-- boar_02: pair B (boar-boar ~1.5 m) -->
+    <include>
+      <uri>model://boar</uri>
+      <name>boar_02</name>
+      <pose>1 -12 0 0 0 2.3</pose>
+    </include>
+    <!-- boar_03: pair B -->
+    <include>
+      <uri>model://boar</uri>
+      <name>boar_03</name>
+      <pose>2.4 -12.6 0 0 0 -0.9</pose>
+    </include>
+    <!-- boar_04: pair C (boar-deer ~1.6 m) -->
+    <include>
+      <uri>model://boar</uri>
+      <name>boar_04</name>
+      <pose>17 -2 0 0 0 -1.2</pose>
+    </include>
+    <!-- male_deer_01: pair C -->
+    <include>
+      <uri>model://male_deer</uri>
+      <name>male_deer_01</name>
+      <pose>18.5 -2.5 0 0 0 -2</pose>
+    </include>
+    <include>
+      <uri>model://boar</uri>
+      <name>boar_05</name>
+      <pose>4 10 0 0 0 -0.5</pose>
+    </include>
+    <!-- female_deer_01: far range -->
+    <include>
+      <uri>model://female_deer</uri>
+      <name>female_deer_01</name>
+      <pose>-18 12 0 0 0 0.3</pose>
+    </include>
+    <!-- female_deer_02: far range -->
+    <include>
+      <uri>model://female_deer</uri>
+      <name>female_deer_02</name>
+      <pose>-7 -18 0 0 0 0.9</pose>
+    </include>
+    <!-- male_deer_02: far range -->
+    <include>
+      <uri>model://male_deer</uri>
+      <name>male_deer_02</name>
+      <pose>11 18 0 0 0 -1.3</pose>
+    </include>
+    <include>
+      <uri>model://kangaroo</uri>
+      <name>kangaroo_02</name>
+      <pose>16 8 0 0 0 -1</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_02</uri>
-      <name>perimeter_pillar_048</name>
-      <pose>33.5699 22.3799 -1.5107 0 0 -3.136052</pose>
+      <uri>model://kangaroo</uri>
+      <name>kangaroo_03</name>
+      <pose>-9 -13 0 0 0 2.1</pose>
     </include>
+    <!-- EXTRA NON-ANIMAL HEAT SOURCES -->
     <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_049</name>
-      <pose>16.7079 35.8701 -1.6546 0 0 1.710851</pose>
+      <uri>model://campfire</uri>
+      <name>campfire2</name>
+      <pose>9 -5 0 0 0 0</pose>
     </include>
+    <!-- SCATTERED ROCKS x10 -->
     <include>
-      <uri>model://rock_pillar_02</uri>
-      <name>perimeter_pillar_050</name>
-      <pose>-9.0756 39.9908 -0.5127 0 0 2.392487</pose>
+      <uri>model://rock_1</uri>
+      <name>forest_scatter_rock_01</name>
+      <pose>-24 8 0 0 0 0.3</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_051</name>
-      <pose>-28.2425 30.8848 -1.623 0 0 -0.533766</pose>
+      <uri>model://rock_2</uri>
+      <name>forest_scatter_rock_02</name>
+      <pose>-20 -13 0 0 0 -0.9</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_02</uri>
-      <name>perimeter_pillar_052</name>
-      <pose>-39.8126 8.5233 -1.0642 0 0 0.106792</pose>
+      <uri>model://rock_1</uri>
+      <name>forest_scatter_rock_03</name>
+      <pose>-15 19 0 0 0 1.7</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_053</name>
-      <pose>-35.5142 -15.0408 -1.111 0 0 2.657443</pose>
+      <uri>model://rock_2</uri>
+      <name>forest_scatter_rock_04</name>
+      <pose>-11 -23 0 0 0 0.55</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_02</uri>
-      <name>perimeter_pillar_054</name>
-      <pose>-25.1882 -33.4307 -0.9026 0 0 1.147791</pose>
+      <uri>model://rock_1</uri>
+      <name>forest_scatter_rock_05</name>
+      <pose>-4 25 0 0 0 -1.25</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_055</name>
-      <pose>-0.9053 -42.0116 -0.3659 0 0 0.909814</pose>
+      <uri>model://rock_2</uri>
+      <name>forest_scatter_rock_06</name>
+      <pose>3 -22 0 0 0 2.2</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_02</uri>
-      <name>perimeter_pillar_056</name>
-      <pose>19.5771 -33.2488 -0.6173 0 0 -2.151938</pose>
+      <uri>model://rock_1</uri>
+      <name>forest_scatter_rock_07</name>
+      <pose>8 23 0 0 0 0.95</pose>
     </include>
     <include>
-      <uri>model://rock_pillar_01</uri>
-      <name>perimeter_pillar_057</name>
-      <pose>36.576 -17.6648 -1.2783 0 0 0.898953</pose>
+      <uri>model://rock_2</uri>
+      <name>forest_scatter_rock_08</name>
+      <pose>14 -19 0 0 0 -2.35</pose>
     </include>
     <include>
-      <uri>model://rock_arch_01</uri>
-      <name>perimeter_arch_058</name>
-      <pose>-19.1795 22.8076 -0.2 0 0 3.840796</pose>
+      <uri>model://rock_1</uri>
+      <name>forest_scatter_rock_09</name>
+      <pose>19 16 0 0 0 1.25</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_059</name>
-      <pose>32.4412 -1.2005 -0.2146 0 0 2.452715</pose>
+      <uri>model://rock_2</uri>
+      <name>forest_scatter_rock_10</name>
+      <pose>23 -9 0 0 0 -0.25</pose>
     </include>
+    <!-- FOREST TREES x90 (spacing >= 2.5 m) -->
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_060</name>
-      <pose>29.9272 0.9574 -0.2296 0 0 -2.197434</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_002</name>
+      <pose>-8.459 3.982 0 0 0 -1.7419</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_061</name>
-      <pose>31.1395 -4.0584 -0.0727 0 0 2.281456</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_005</name>
+      <pose>-10.421 -2.543 0 0 0 -1.0112</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_062</name>
-      <pose>31.1336 0.4917 -0.1655 0 0 -2.47208</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_008</name>
+      <pose>10.327 3.629 0 0 0 1.9586</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_063</name>
-      <pose>30.5341 -0.1125 -0.1605 0 0 -1.232981</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_011</name>
+      <pose>-10.362 -9.252 0 0 0 -2.8067</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_064</name>
-      <pose>32.2488 8.2381 -0.2894 0 0 -1.642974</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_012</name>
+      <pose>-7.141 -0.309 0 0 0 0.8477</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_065</name>
-      <pose>29.0309 8.8555 -0.0853 0 0 -1.422387</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_013</name>
+      <pose>4.991 -4.294 0 0 0 -2.0018</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_066</name>
-      <pose>30.1977 4.9035 -0.1756 0 0 -1.257094</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_015</name>
+      <pose>2.208 10.188 0 0 0 0.585</pose>
     </include>
     <include>
-      <uri>model://rock_small_01</uri>
-      <name>perimeter_scree_067</name>
-      <pose>30.0999 8.4151 -0.1876 0 0 -1.028276</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_016</name>
+      <pose>7.307 5.794 0 0 0 2.0578</pose>
     </include>
     <include>
-      <uri>model://rock_small_05</uri>
-      <name>perimeter_toe_068</name>
-      <pose>26.6808 18.25 -0.4 0 0 -1.729592</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_017</name>
+      <pose>5.763 2.723 0 0 0 2.5738</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_069</name>
-      <pose>25.3867 15.4768 -0.0884 0 0 -1.057978</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_020</name>
+      <pose>0.729 -6.591 0 0 0 -0.9212</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_070</name>
-      <pose>24.0734 18.648 -0.0973 0 0 0.517627</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_023</name>
+      <pose>8.879 11.241 0 0 0 0.9158</pose>
     </include>
     <include>
-      <uri>model://rock_small_06</uri>
-      <name>perimeter_toe_071</name>
-      <pose>18.3166 25.1124 -0.1562 0 0 2.636818</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_024</name>
+      <pose>4.017 -9.207 0 0 0 0.5243</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_072</name>
-      <pose>18.2822 23.068 -0.1272 0 0 -1.258259</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_026</name>
+      <pose>-11.653 5.107 0 0 0 -1.1882</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_073</name>
-      <pose>15.5283 23.6529 -0.1654 0 0 -3.112287</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_027</name>
+      <pose>-3.149 11.226 0 0 0 -0.2665</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_074</name>
-      <pose>12.5478 28.4316 -0.5459 0 0 2.957781</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_031</name>
+      <pose>9.267 -11.68 0 0 0 1.5227</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_075</name>
-      <pose>11.7603 27.0227 -0.1177 0 0 -2.682165</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_032</name>
+      <pose>11.201 -0.808 0 0 0 -2.9987</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_076</name>
-      <pose>12.3997 25.2928 -0.2138 0 0 -0.065423</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_033</name>
+      <pose>4.879 -0.616 0 0 0 1.0957</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_077</name>
-      <pose>5.5869 29.9026 -0.2506 0 0 3.114717</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_034</name>
+      <pose>-1.928 -8.767 0 0 0 2.121</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_078</name>
-      <pose>7.4037 26.6355 -0.1075 0 0 -2.705004</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_036</name>
+      <pose>-4.523 6.22 0 0 0 -2.7375</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_079</name>
-      <pose>7.2265 27.5102 -0.1939 0 0 1.332957</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_037</name>
+      <pose>11.516 -8.706 0 0 0 -1.6878</pose>
     </include>
     <include>
-      <uri>model://rock_small_04</uri>
-      <name>perimeter_scree_080</name>
-      <pose>7.0079 27.3377 -0.1749 0 0 -2.909347</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_039</name>
+      <pose>-24.17 2.992 0 0 0 -2.8498</pose>
     </include>
     <include>
-      <uri>model://rock_small_05</uri>
-      <name>perimeter_toe_081</name>
-      <pose>-3.1964 30.669 -0.5924 0 0 -3.123374</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_046</name>
+      <pose>-25.074 6.181 0 0 0 0.1393</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_082</name>
-      <pose>-1.6774 29.7661 -0.1124 0 0 1.266873</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_047</name>
+      <pose>10.808 -16.996 0 0 0 -0.125</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_083</name>
-      <pose>-2.9444 29.1375 -0.0813 0 0 -0.54927</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_050</name>
+      <pose>12.056 -19.187 0 0 0 0.3962</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_084</name>
-      <pose>-1.978 28.636 -0.1897 0 0 -2.540421</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_052</name>
+      <pose>15.395 14.028 0 0 0 -3.0565</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_085</name>
-      <pose>-1.6111 29.3158 -0.1556 0 0 1.614755</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_053</name>
+      <pose>-15.302 -0.494 0 0 0 -0.5017</pose>
     </include>
     <include>
-      <uri>model://rock_small_06</uri>
-      <name>perimeter_toe_086</name>
-      <pose>-12.5667 30.8776 -0.6143 0 0 -2.335219</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_055</name>
+      <pose>-4.901 17.955 0 0 0 1.0667</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_087</name>
-      <pose>-12.402 27.8353 -0.2374 0 0 -1.651979</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_057</name>
+      <pose>-22.856 12.357 0 0 0 1.5114</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_088</name>
-      <pose>-9.7409 29.5735 -0.2342 0 0 -1.451642</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_058</name>
+      <pose>-24.757 -0.49 0 0 0 -3.0063</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_089</name>
-      <pose>-20.8529 23.6489 -0.2158 0 0 2.072584</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_059</name>
+      <pose>-0.599 23.98 0 0 0 2.8042</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_090</name>
-      <pose>-18.3514 24.2665 -0.0948 0 0 -2.039202</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_061</name>
+      <pose>19.651 -8.63 0 0 0 -2.7778</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_091</name>
-      <pose>-17.8726 22.4026 -0.1037 0 0 -0.250788</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_063</name>
+      <pose>20.379 -16.346 0 0 0 -3.0146</pose>
     </include>
     <include>
-      <uri>model://rock_small_04</uri>
-      <name>perimeter_scree_092</name>
-      <pose>-20.8649 22.0618 -0.1325 0 0 0.850034</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_064</name>
+      <pose>-8.996 -17.824 0 0 0 -1.4249</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_093</name>
-      <pose>-28.518 15.8152 -0.4467 0 0 1.493397</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_065</name>
+      <pose>12.445 -14.801 0 0 0 2.3971</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_094</name>
-      <pose>-27.2879 15.6418 -0.2375 0 0 -1.168564</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_066</name>
+      <pose>-14.288 20.464 0 0 0 0.231</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_095</name>
-      <pose>-25.6495 14.591 -0.1889 0 0 2.388735</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_073</name>
+      <pose>25.691 9.083 0 0 0 3.0289</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_096</name>
-      <pose>-27.9148 12.775 -0.1916 0 0 -2.24759</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_076</name>
+      <pose>5.497 22.513 0 0 0 2.3649</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_097</name>
-      <pose>-26.6809 16.6242 -0.2128 0 0 -0.499361</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_078</name>
+      <pose>14.847 -8.912 0 0 0 0.6361</pose>
     </include>
     <include>
-      <uri>model://rock_small_05</uri>
-      <name>perimeter_toe_098</name>
-      <pose>-30.7037 6.9478 -0.1567 0 0 -0.227795</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_079</name>
+      <pose>2.711 -25.548 0 0 0 1.212</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_099</name>
-      <pose>-28.0086 9.2032 -0.1848 0 0 -2.040331</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_083</name>
+      <pose>17.517 -16.812 0 0 0 0.6237</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_100</name>
-      <pose>-29.4785 5.2872 -0.1299 0 0 -0.435748</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_085</name>
+      <pose>20.62 7.825 0 0 0 -1.0005</pose>
     </include>
     <include>
-      <uri>model://rock_small_06</uri>
-      <name>perimeter_toe_101</name>
-      <pose>-31.4325 0.2971 -0.2361 0 0 1.604689</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_088</name>
+      <pose>-8.527 18.57 0 0 0 -1.9295</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_102</name>
-      <pose>-30.3603 -1.3729 -0.0955 0 0 2.165177</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_089</name>
+      <pose>5.192 15.472 0 0 0 1.5145</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_103</name>
-      <pose>-29.6241 0.4998 -0.1656 0 0 0.92833</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_091</name>
+      <pose>18.08 -4.932 0 0 0 -0.8186</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_104</name>
-      <pose>-29.1134 -9.7917 -0.1559 0 0 -2.347325</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_093</name>
+      <pose>14.35 -3.309 0 0 0 1.0119</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_105</name>
-      <pose>-27.7186 -8.5431 -0.2285 0 0 1.402203</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_095</name>
+      <pose>-8.395 -21.601 0 0 0 0.5743</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_106</name>
-      <pose>-27.0847 -7.2724 -0.193 0 0 2.050921</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_096</name>
+      <pose>23.329 -11.282 0 0 0 0.3721</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_107</name>
-      <pose>-26.5327 -8.8704 -0.2086 0 0 -1.740577</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_097</name>
+      <pose>-17.149 14.016 0 0 0 0.6416</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_108</name>
-      <pose>-24.5257 -18.4179 -0.2044 0 0 -2.51852</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_099</name>
+      <pose>-13.122 -16.028 0 0 0 -1.1045</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_109</name>
-      <pose>-21.8322 -17.1692 -0.1301 0 0 0.430394</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_101</name>
+      <pose>15.122 -15.329 0 0 0 -2.5923</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_110</name>
-      <pose>-23.5038 -17.2288 -0.0782 0 0 1.233683</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_104</name>
+      <pose>1.632 22.011 0 0 0 2.8151</pose>
     </include>
     <include>
-      <uri>model://rock_small_01</uri>
-      <name>perimeter_scree_111</name>
-      <pose>-23.8212 -15.2786 -0.1542 0 0 1.041386</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_105</name>
+      <pose>12.988 21.018 0 0 0 -1.3949</pose>
     </include>
     <include>
-      <uri>model://rock_small_05</uri>
-      <name>perimeter_toe_112</name>
-      <pose>-23.3644 -23.2609 -0.5796 0 0 -3.085422</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_106</name>
+      <pose>8.249 -20.236 0 0 0 -2.0262</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_113</name>
-      <pose>-23.3774 -20.9684 -0.075 0 0 2.731423</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_108</name>
+      <pose>2.963 26.025 0 0 0 -0.3778</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_114</name>
-      <pose>-20.0171 -22.2814 -0.1612 0 0 0.042716</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_110</name>
+      <pose>0.982 -23.713 0 0 0 -0.4868</pose>
     </include>
     <include>
-      <uri>model://rock_small_06</uri>
-      <name>perimeter_toe_115</name>
-      <pose>-11.8579 -28.4778 -0.4194 0 0 0.65262</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_111</name>
+      <pose>16.709 3.551 0 0 0 -1.5997</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_116</name>
-      <pose>-8.7731 -26.3925 -0.1358 0 0 -2.415332</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_114</name>
+      <pose>-8.526 24.433 0 0 0 -1.2321</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_117</name>
-      <pose>-12.5829 -25.5501 -0.0763 0 0 0.016126</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_117</name>
+      <pose>-21.651 -9 0 0 0 -0.1991</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_118</name>
-      <pose>-11.2835 -25.2482 -0.0966 0 0 1.564511</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_118</name>
+      <pose>19.121 -12.34 0 0 0 0.2371</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_119</name>
-      <pose>-3.7061 -31.4145 -0.3005 0 0 -0.483732</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_119</name>
+      <pose>6.041 -16.925 0 0 0 0.4535</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_120</name>
-      <pose>-4.7458 -29.8571 -0.1105 0 0 -1.704017</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_123</name>
+      <pose>-17.193 -2.218 0 0 0 -0.9528</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_121</name>
-      <pose>-4.6937 -28.6017 -0.1075 0 0 0.351204</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_124</name>
+      <pose>-27.453 -3.97 0 0 0 -1.7623</pose>
     </include>
     <include>
-      <uri>model://rock_small_01</uri>
-      <name>perimeter_scree_122</name>
-      <pose>-3.5139 -29.9967 -0.1405 0 0 -1.245601</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_126</name>
+      <pose>-16.983 3.368 0 0 0 -1.3218</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_123</name>
-      <pose>-3.697 -28.5017 -0.1469 0 0 0.421467</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_127</name>
+      <pose>18.865 5.759 0 0 0 -2.3709</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_124</name>
-      <pose>3.6124 -33.3699 -0.3166 0 0 -1.636331</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_128</name>
+      <pose>20.047 -0.336 0 0 0 1.548</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_125</name>
-      <pose>2.3873 -30.3735 -0.1706 0 0 0.062654</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_129</name>
+      <pose>23.307 -3.272 0 0 0 -0.6875</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_126</name>
-      <pose>0.835 -31.251 -0.2292 0 0 -0.321793</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_132</name>
+      <pose>-5.072 -15.951 0 0 0 -1.1146</pose>
     </include>
     <include>
-      <uri>model://rock_small_05</uri>
-      <name>perimeter_toe_127</name>
-      <pose>14.4866 -26.229 -0.4989 0 0 3.028476</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_133</name>
+      <pose>22.844 1.841 0 0 0 2.066</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_128</name>
-      <pose>14.3151 -24.1858 -0.1241 0 0 1.379282</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_134</name>
+      <pose>-1.366 -15.592 0 0 0 -1.5253</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_129</name>
-      <pose>12.4361 -24.2584 -0.0969 0 0 -3.000681</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_136</name>
+      <pose>16.714 0.51 0 0 0 -1.6609</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_130</name>
-      <pose>12.6123 -25.162 -0.1947 0 0 0.019649</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_138</name>
+      <pose>-2.361 -25.816 0 0 0 -2.4252</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_131</name>
-      <pose>12.5867 -24.369 -0.216 0 0 -2.729472</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_143</name>
+      <pose>2.799 19.234 0 0 0 1.528</pose>
     </include>
     <include>
-      <uri>model://rock_small_06</uri>
-      <name>perimeter_toe_132</name>
-      <pose>20.7214 -22.2338 -0.5715 0 0 -0.242503</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_150</name>
+      <pose>13.762 9.884 0 0 0 -0.1899</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_133</name>
-      <pose>21.1602 -20.171 -0.1354 0 0 0.342038</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_151</name>
+      <pose>-15.196 -6.318 0 0 0 0.3523</pose>
     </include>
     <include>
-      <uri>model://rock_detail_05</uri>
-      <name>perimeter_scree_134</name>
-      <pose>16.9779 -21.4337 -0.1978 0 0 -0.142258</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_152</name>
+      <pose>-4.095 22.336 0 0 0 -3.1346</pose>
     </include>
     <include>
-      <uri>model://rock_small_01</uri>
-      <name>perimeter_scree_135</name>
-      <pose>19.2465 -21.2771 -0.1282 0 0 -0.858825</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_153</name>
+      <pose>-17.885 0.292 0 0 0 -3.0113</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_136</name>
-      <pose>20.5524 -20.5981 -0.1055 0 0 -2.110243</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_155</name>
+      <pose>20.058 3.44 0 0 0 1.2211</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_01</uri>
-      <name>perimeter_toe_137</name>
-      <pose>27.3885 -14.7876 -0.5809 0 0 -2.349888</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_158</name>
+      <pose>-13.08 13.969 0 0 0 0.4993</pose>
     </include>
     <include>
-      <uri>model://rock_small_02</uri>
-      <name>perimeter_scree_138</name>
-      <pose>27.1018 -11.6249 -0.1982 0 0 -1.212945</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_159</name>
+      <pose>-0.002 -20.692 0 0 0 -2.514</pose>
     </include>
     <include>
-      <uri>model://rock_small_03</uri>
-      <name>perimeter_scree_139</name>
-      <pose>23.5172 -15.2431 -0.128 0 0 2.492512</pose>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_161</name>
+      <pose>9.122 20.872 0 0 0 -2.9069</pose>
     </include>
     <include>
-      <uri>model://rock_small_04</uri>
-      <name>perimeter_scree_140</name>
-      <pose>26.1256 -11.8503 -0.1564 0 0 -2.004525</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_164</name>
+      <pose>6.081 -10.641 0 0 0 1.4997</pose>
     </include>
     <include>
-      <uri>model://rock_cluster_02</uri>
-      <name>perimeter_toe_141</name>
-      <pose>28.6513 -9.7311 -0.4334 0 0 -1.679251</pose>
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_167</name>
+      <pose>14.005 0.869 0 0 0 -0.4623</pose>
     </include>
     <include>
-      <uri>model://rock_detail_01</uri>
-      <name>perimeter_scree_142</name>
-      <pose>27.279 -9.9427 -0.1634 0 0 2.583757</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_168</name>
+      <pose>-20.199 6.361 0 0 0 1.727</pose>
     </include>
     <include>
-      <uri>model://rock_detail_02</uri>
-      <name>perimeter_scree_143</name>
-      <pose>26.3242 -10.9532 -0.2395 0 0 1.853896</pose>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_169</name>
+      <pose>0.803 -17.28 0 0 0 -0.1503</pose>
     </include>
     <include>
-      <uri>model://rock_detail_03</uri>
-      <name>perimeter_scree_144</name>
-      <pose>25.7429 -10.6254 -0.1953 0 0 -1.160958</pose>
+      <uri>model://autumn_tree</uri>
+      <name>active_forest_tree_170</name>
+      <pose>21.842 11.393 0 0 0 -0.3118</pose>
     </include>
     <include>
-      <uri>model://rock_detail_04</uri>
-      <name>perimeter_scree_145</name>
-      <pose>26.6455 -6.5362 -0.1029 0 0 1.535718</pose>
-    </include> -->
-
-    <!-- Bear -->
-    <!-- <include>
-      <uri>model://bear_v01</uri>
-      <name>bear_1</name>
-      <pose>-10 8 0 0 0 0.7</pose>
-    </include> -->
-
-    <!-- Buffalo -->
-    <!-- <include>
-      <uri>model://buffalo_v01</uri>
-      <name>buffalo_1</name>
-      <pose>10 8 0 0 0 -1.0</pose>
-    </include> -->
-
-    <!-- Lioness -->
-    <!-- <include>
-      <uri>model://lioness_v01</uri>
-      <name>lioness_1</name>
-      <pose>12 -8 0 0 0 2.2</pose>
-    </include> -->
-    <!-- OIIA Cat -->
+      <uri>model://tree_background_02</uri>
+      <name>active_forest_tree_172</name>
+      <pose>-10.988 16.606 0 0 0 -2.073</pose>
+    </include>
+    <include>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_173</name>
+      <pose>2.562 -15.272 0 0 0 0.0579</pose>
+    </include>
+    <include>
+      <uri>model://tree_background_08</uri>
+      <name>active_forest_tree_174</name>
+      <pose>25.778 12.6 0 0 0 0.1124</pose>
+    </include>
+    <include>
+      <uri>model://tree_background_01</uri>
+      <name>active_forest_tree_176</name>
+      <pose>-10.858 20.3 0 0 0 -2.1987</pose>
+    </include>
     <include>
-      <uri>model://oiia_cat_v01</uri>
-      <name>oiia_cat_1</name>
-      <pose>-5 -8 0 0 0 0.5</pose>
+      <uri>model://tree_background_05</uri>
+      <name>active_forest_tree_178</name>
+      <pose>-16.875 -18.299 0 0 0 1.0547</pose>
     </include>
-
-    <!-- Tung Tung Tung Sahur -->
-    <!-- <include>
-      <uri>model://tung_sahur_v01</uri>
-      <name>tung_sahur_1</name>
-      <pose>0 12 0 0 0 -1.57</pose>
-    </include>     -->
   </world>
 </sdf>
