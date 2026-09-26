@@ -12,8 +12,14 @@ Outputs:
   perception/thermal/max_temperature        sensor_msgs/msg/Temperature
 
 All topic names are relative to the node namespace. This node detects heat
-only; it does not decide where the robot should navigate or assign candidate
-IDs, which remain responsibilities of the spatial/mission parts of the team.
+only; it does not decide where the robot should navigate.
+
+Each hot region is tracked across frames and published with a stable
+image-space track ID (``heat_7``). A region must be seen in
+``persistence_frames`` consecutive frames before it is published (R5), and a
+track keeps its ID through ``tracking_max_missed_frames`` missing frames. These
+track IDs let the YOLO node vote for the same animal in every frame; map-level
+candidate IDs are still assigned by the candidate registry.
 """
 
 from typing import Dict, List
@@ -27,6 +33,15 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, Temperature
 from std_msgs.msg import Bool
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
+
+from perception_common import HotRegionTracker, short_tag
+from perception_overlay import (
+    CONFIRMED_HEAT_COLOUR,
+    TENTATIVE_HEAT_COLOUR,
+    LabelPlacer,
+    draw_legend,
+    draw_tag,
+)
 
 
 class ThermalCandidateDetector(Node):
@@ -59,13 +74,28 @@ class ThermalCandidateDetector(Node):
         self.declare_parameter('hot_threshold_k', 315.0)
         self.declare_parameter('min_hot_area_px', 30)
         self.declare_parameter('morphology_kernel_px', 3)
-        self.declare_parameter('persistence_frames', 2)
-        self.declare_parameter('max_regions', 5)
+        # R5: a hot region must be seen in this many consecutive frames.
+        self.declare_parameter('persistence_frames', 3)
+        self.declare_parameter('max_regions', 8)
+        self.declare_parameter('tracking_iou_threshold', 0.2)
+        self.declare_parameter('tracking_max_missed_frames', 2)
+        # Also match a region whose centre moved less than this many box
+        # diagonals (small, distant blobs lose IoU quickly).
+        self.declare_parameter('tracking_max_center_jump', 1.0)
         self.declare_parameter('publish_annotated_image', True)
         self.declare_parameter('log_period_sec', 2.0)
 
         self.bridge = cv_bridge.CvBridge()
-        self.hot_streak = 0
+        self.tracker = HotRegionTracker(
+            iou_threshold=float(self.get_parameter('tracking_iou_threshold').value),
+            max_missed_frames=int(
+                self.get_parameter('tracking_max_missed_frames').value
+            ),
+            persistence_frames=int(self.get_parameter('persistence_frames').value),
+            max_center_jump=float(
+                self.get_parameter('tracking_max_center_jump').value
+            ),
+        )
         self.last_log_ns = self.get_clock().now().nanoseconds
 
         image_topic = str(self.get_parameter('image_topic').value)
@@ -139,22 +169,32 @@ class ThermalCandidateDetector(Node):
             neginf=0.0,
         )
         regions = self._find_hot_regions(finite_temperature)
-        if regions:
-            self.hot_streak += 1
-        else:
-            self.hot_streak = 0
-
-        persistence = max(
-            1,
-            int(self.get_parameter('persistence_frames').value),
+        tracks = self.tracker.update(
+            [
+                (
+                    region['x'],
+                    region['y'],
+                    region['x'] + region['width'],
+                    region['y'] + region['height'],
+                )
+                for region in regions
+            ],
+            regions,
         )
-        confirmed_regions = regions if self.hot_streak >= persistence else []
+        # Only confirmed tracks seen in this frame are published, so every box
+        # is current. A track that misses a frame keeps its ID in the tracker
+        # and is published again with the same ID when it reappears.
+        confirmed_tracks = [
+            track for track in tracks
+            if track['confirmed'] and track['observed']
+        ]
+        persistence = self.tracker.persistence_frames
 
         self._publish_normalized(msg, finite_temperature)
-        self._publish_detections(msg, confirmed_regions)
+        self._publish_detections(msg, confirmed_tracks)
 
         active_msg = Bool()
-        active_msg.data = bool(confirmed_regions)
+        active_msg.data = bool(confirmed_tracks)
         self.candidate_active_pub.publish(active_msg)
 
         max_temperature = float(finite_temperature.max())
@@ -168,8 +208,7 @@ class ThermalCandidateDetector(Node):
             self._publish_annotated(
                 msg,
                 finite_temperature,
-                regions,
-                confirmed=bool(confirmed_regions),
+                tracks,
                 persistence=persistence,
             )
 
@@ -183,7 +222,8 @@ class ThermalCandidateDetector(Node):
                 f'min={float(finite_temperature.min()):.2f} K | '
                 f'mean={float(finite_temperature.mean()):.2f} K | '
                 f'max={max_temperature:.2f} K | '
-                f'hot_regions={len(confirmed_regions)}'
+                f'hot_regions={len(confirmed_tracks)} '
+                f'[{", ".join(str(track["id"]) for track in confirmed_tracks)}]'
             )
             self.last_log_ns = now_ns
 
@@ -253,7 +293,7 @@ class ThermalCandidateDetector(Node):
     def _publish_detections(
         self,
         source_msg: Image,
-        regions: List[Dict[str, float]],
+        tracks: List[Dict[str, object]],
     ) -> None:
         output = Detection2DArray()
         output.header = source_msg.header
@@ -261,20 +301,22 @@ class ThermalCandidateDetector(Node):
         display_max = float(self.get_parameter('display_max_k').value)
         score_denominator = max(1e-6, display_max - threshold)
 
-        for region in regions:
+        for track in tracks:
+            region = track['data']
+            x1, y1, x2, y2 = track['box']
             detection = Detection2D()
             detection.header = source_msg.header
-            detection.id = ''
+            detection.id = str(track['id'])
             self._set_bbox(
                 detection,
-                center_x=region['x'] + region['width'] / 2.0,
-                center_y=region['y'] + region['height'] / 2.0,
-                width=region['width'],
-                height=region['height'],
+                center_x=(x1 + x2) / 2.0,
+                center_y=(y1 + y2) / 2.0,
+                width=x2 - x1,
+                height=y2 - y1,
             )
             hypothesis = ObjectHypothesisWithPose()
             confidence = np.clip(
-                (region['max_temperature'] - threshold) / score_denominator,
+                (float(region['max_temperature']) - threshold) / score_denominator,
                 0.0,
                 1.0,
             )
@@ -289,8 +331,7 @@ class ThermalCandidateDetector(Node):
         self,
         source_msg: Image,
         temperature: np.ndarray,
-        regions: List[Dict[str, float]],
-        confirmed: bool,
+        tracks: List[Dict[str, object]],
         persistence: int,
     ) -> None:
         display_min = float(self.get_parameter('display_min_k').value)
@@ -300,37 +341,54 @@ class ThermalCandidateDetector(Node):
             np.clip((temperature - display_min) / denominator, 0.0, 1.0) * 255.0
         ).astype(np.uint8)
         annotated = cv2.applyColorMap(mono8, cv2.COLORMAP_INFERNO)
-        box_colour = (0, 255, 0) if confirmed else (0, 191, 255)
+        height, width = annotated.shape[:2]
 
-        for region in regions:
-            x1 = int(region['x'])
-            y1 = int(region['y'])
-            x2 = int(region['x'] + region['width'])
-            y2 = int(region['y'] + region['height'])
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), box_colour, 2)
-            label = f"{region['max_temperature']:.1f} K"
-            cv2.putText(
-                annotated,
-                label,
-                (x1, max(15, y1 - 5)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.45,
-                box_colour,
-                1,
-                cv2.LINE_AA,
+        legend_lines = []
+        for track in tracks:
+            tag = short_tag(str(track['id']))
+            temperature_k = float(track['data'].get('max_temperature', 0.0))
+            if track['confirmed']:
+                state = 'confirmed' if track['observed'] else 'coasting'
+                legend_lines.append(
+                    (f'{tag} {temperature_k:.0f} K {state}', CONFIRMED_HEAT_COLOUR)
+                )
+            else:
+                legend_lines.append((
+                    f'{tag} {temperature_k:.0f} K {track["streak"]}/{persistence}',
+                    TENTATIVE_HEAT_COLOUR,
+                ))
+        legend_rect = draw_legend(
+            annotated,
+            legend_lines[:8],
+            origin=(3, 3),
+            scale=0.33,
+            pad=3,
+        )
+
+        placer = LabelPlacer(width, height, reserved=[legend_rect])
+        # Boxes only for regions seen in this frame (a coasting track is only
+        # listed in the legend, its last box would be out of date).
+        visible = [track for track in tracks if track['observed']]
+        for track in visible:
+            colour = (
+                CONFIRMED_HEAT_COLOUR if track['confirmed']
+                else TENTATIVE_HEAT_COLOUR
             )
-
-        if regions and not confirmed:
-            warmup = f'candidate persistence {self.hot_streak}/{persistence}'
-            cv2.putText(
+            x1, y1, x2, y2 = (int(round(value)) for value in track['box'])
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), colour, 1)
+        for track in visible:
+            colour = (
+                CONFIRMED_HEAT_COLOUR if track['confirmed']
+                else TENTATIVE_HEAT_COLOUR
+            )
+            draw_tag(
                 annotated,
-                warmup,
-                (8, 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 191, 255),
-                1,
-                cv2.LINE_AA,
+                placer,
+                short_tag(str(track['id'])),
+                track['box'],
+                colour,
+                scale=0.33,
+                pad=1,
             )
 
         output_msg = self.bridge.cv2_to_imgmsg(annotated, encoding='bgr8')

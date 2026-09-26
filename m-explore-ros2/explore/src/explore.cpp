@@ -38,11 +38,16 @@
 
 #include <explore/explore.h>
 
-#include <algorithm>
-#include <mutex>
 #include <thread>
 
-#include "nav2_costmap_2d/cost_values.hpp"
+inline static bool same_point(const geometry_msgs::msg::Point& one,
+                              const geometry_msgs::msg::Point& two)
+{
+  double dx = one.x - two.x;
+  double dy = one.y - two.y;
+  double dist = sqrt(dx * dx + dy * dy);
+  return dist < 0.01;
+}
 
 namespace explore
 {
@@ -65,11 +70,6 @@ Explore::Explore()
   this->declare_parameter<float>("gain_scale", 1.0);
   this->declare_parameter<float>("min_frontier_size", 0.5);
   this->declare_parameter<bool>("return_to_init", false);
-  this->declare_parameter<float>("blacklist_radius", 1.0);
-  this->declare_parameter<float>("min_goal_distance", 1.5);
-  this->declare_parameter<float>("goal_clearance", 0.7);
-  this->declare_parameter<float>("max_goal_backoff", 2.0);
-  this->declare_parameter<int>("max_no_goal_cycles", 3);
 
   this->get_parameter("planner_frequency", planner_frequency_);
   this->get_parameter("progress_timeout", timeout);
@@ -80,11 +80,6 @@ Explore::Explore()
   this->get_parameter("min_frontier_size", min_frontier_size);
   this->get_parameter("return_to_init", return_to_init_);
   this->get_parameter("robot_base_frame", robot_base_frame_);
-  this->get_parameter("blacklist_radius", blacklist_radius_);
-  this->get_parameter("min_goal_distance", min_goal_distance_);
-  this->get_parameter("goal_clearance", goal_clearance_);
-  this->get_parameter("max_goal_backoff", max_goal_backoff_);
-  this->get_parameter("max_no_goal_cycles", max_no_goal_cycles_);
 
   progress_timeout_ = timeout;
   move_base_client_ =
@@ -233,13 +228,8 @@ void Explore::visualizeFrontiers(
 
 void Explore::makePlan()
 {
-  // Robot pose. If TF is not available, skip this cycle instead of searching
-  // from (0,0) (the old behaviour, which ranked frontiers from the map origin).
-  geometry_msgs::msg::Pose pose;
-  if (!costmap_client_.getRobotPose(pose)) {
-    return;
-  }
-
+  // find frontiers
+  auto pose = costmap_client_.getRobotPose();
   // get frontiers sorted according to cost
   auto frontiers = search_.searchFrom(pose.position);
   RCLCPP_DEBUG(logger_, "found %lu frontiers", frontiers.size());
@@ -248,7 +238,11 @@ void Explore::makePlan()
   }
 
   if (frontiers.empty()) {
-    finishExploration("no frontiers left");
+    RCLCPP_WARN(logger_, "No frontiers found, stopping.");
+    auto status_msg = explore_lite_msgs::msg::ExploreStatus();
+    status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
+    status_pub_->publish(status_msg);
+    stop(true);
     return;
   }
 
@@ -257,128 +251,50 @@ void Explore::makePlan()
     visualizeFrontiers(frontiers);
   }
 
-  // 1) Commit to the goal we are already driving to.
-  // Re-picking the "best" frontier every cycle made the goal jump to a new
-  // direction whenever the robot moved a few cm (which cell of a large
-  // frontier is closest changes all the time). With a rotate-in-place
-  // controller that means the robot only turns and never drives. So keep the
-  // current goal until it is reached, aborted, timed out, or the unknown area
-  // it was chosen for has been observed.
-  if (goal_active_ && has_goal_) {
-    if (goalStillUseful(frontiers)) {
-      const double dist_to_goal =
-          std::hypot(pose.position.x - current_goal_.x,
-                     pose.position.y - current_goal_.y);
-      // progress = robot actually got >= 10 cm closer
-      if (dist_to_goal < prev_distance_ - 0.1) {
-        last_progress_ = this->now();
-        prev_distance_ = dist_to_goal;
-      }
-      if ((this->now() - last_progress_ >
-           tf2::durationFromSec(progress_timeout_)) &&
-          !resuming_) {
-        RCLCPP_WARN(logger_,
-                    "No progress towards (%.2f, %.2f) for %.0f s, "
-                    "blacklisting it",
-                    current_goal_.x, current_goal_.y, progress_timeout_);
-        frontier_blacklist_.push_back(current_goal_);
-        frontier_blacklist_.push_back(current_centroid_);
-        has_goal_ = false;
-        // fall through and choose a new goal
-      } else {
-        resuming_ = false;
-        return;  // keep driving to the committed goal
-      }
-    } else {
-      RCLCPP_INFO(logger_,
-                  "Area around goal (%.2f, %.2f) already explored, "
-                  "choosing a new goal",
-                  current_goal_.x, current_goal_.y);
-      has_goal_ = false;
-    }
-  }
-  resuming_ = false;
-
-  // 2) Choose a new goal: best (lowest cost) frontier that is not blacklisted
-  // AND has a safe goal point that Nav2 can reach (not the raw centroid).
-  geometry_msgs::msg::Point target_position;
-  geometry_msgs::msg::Point target_centroid;
-  bool found = false;
-  bool skipped_unsafe = false;
-  for (const auto& f : frontiers) {
-    if (goalOnBlacklist(f.centroid)) {
-      continue;
-    }
-    geometry_msgs::msg::Point candidate;
-    if (!selectGoal(f, pose.position, candidate)) {
-      RCLCPP_DEBUG(logger_,
-                   "frontier at (%.2f, %.2f) has no obstacle-free goal point",
-                   f.centroid.x, f.centroid.y);
-      skipped_unsafe = true;
-      continue;
-    }
-    if (goalOnBlacklist(candidate)) {
-      continue;
-    }
-    target_position = candidate;
-    target_centroid = f.centroid;
-    found = true;
-    break;
-  }
-
-  if (!found) {
-    // A goal we just dropped (timed out / explored) may still be active in
-    // Nav2: cancel it so the robot does not keep driving there.
-    if (goal_active_) {
-      move_base_client_->async_cancel_all_goals();
-      goal_active_ = false;
-    }
-    // Every frontier is blacklisted -> done. If some were only skipped because
-    // no safe goal exists right now, wait a few cycles (the map may still
-    // change) before declaring completion.
-    if (!skipped_unsafe || ++no_goal_cycles_ >= max_no_goal_cycles_) {
-      finishExploration(
-          "all remaining frontiers are blacklisted or unreachable");
-    } else {
-      RCLCPP_INFO(logger_,
-                  "No reachable frontier this cycle (%d/%d), retrying",
-                  no_goal_cycles_, max_no_goal_cycles_);
-    }
+  // find non blacklisted frontier
+  auto frontier =
+      std::find_if_not(frontiers.begin(), frontiers.end(),
+                       [this](const frontier_exploration::Frontier& f) {
+                         return goalOnBlacklist(f.centroid);
+                       });
+  if (frontier == frontiers.end()) {
+    RCLCPP_WARN(logger_, "All frontiers traversed/tried out, stopping.");
+    auto status_msg = explore_lite_msgs::msg::ExploreStatus();
+    status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
+    status_pub_->publish(status_msg);
+    stop(true);
     return;
   }
-  no_goal_cycles_ = 0;
+  geometry_msgs::msg::Point target_position = frontier->centroid;
 
-  const double dist_to_goal = std::hypot(pose.position.x - target_position.x,
-                                         pose.position.y - target_position.y);
-  last_progress_ = this->now();
-  prev_distance_ = dist_to_goal;
+  // time out if we are not making any progress
+  bool same_goal = same_point(prev_goal_, target_position);
 
-  current_goal_ = target_position;
-  current_centroid_ = target_centroid;
-  has_goal_ = true;
+  prev_goal_ = target_position;
+  if (!same_goal || prev_distance_ > frontier->min_distance) {
+    // we have different goal or we made some progress
+    last_progress_ = this->now();
+    prev_distance_ = frontier->min_distance;
+  }
+  // black list if we've made no progress for a long time
+  if (goal_active_ &&
+      (this->now() - last_progress_ >
+       tf2::durationFromSec(progress_timeout_)) &&
+      !resuming_) {
+    frontier_blacklist_.push_back(target_position);
+    RCLCPP_DEBUG(logger_, "Adding current goal to black list");
+    makePlan();
+    return;
+  }
 
-  RCLCPP_INFO(logger_, "New exploration goal (%.2f, %.2f), %.1f m away",
-              target_position.x, target_position.y, dist_to_goal);
+  // ensure only first call of makePlan was set resuming to true
+  if (resuming_) {
+    resuming_ = false;
+  }
 
-  if (visualize_) {
-    visualization_msgs::msg::MarkerArray goal_markers;
-    visualization_msgs::msg::Marker g;
-    g.header.frame_id = costmap_client_.getGlobalFrameID();
-    g.header.stamp = this->now();
-    g.ns = "explore_goal";
-    g.id = 0;
-    g.type = visualization_msgs::msg::Marker::SPHERE;
-    g.action = visualization_msgs::msg::Marker::ADD;
-    g.pose.position = target_position;
-    g.pose.orientation.w = 1.0;
-    g.scale.x = 0.4;
-    g.scale.y = 0.4;
-    g.scale.z = 0.4;
-    g.color.r = 1.0;
-    g.color.g = 1.0;
-    g.color.a = 1.0;  // yellow = goal actually sent to Nav2
-    goal_markers.markers.push_back(g);
-    marker_array_publisher_->publish(goal_markers);
+  // we don't need to do anything if we still pursuing the same goal
+  if (same_goal && goal_active_) {
+    return;
   }
 
   RCLCPP_DEBUG(logger_, "Sending goal to move base nav2");
@@ -386,12 +302,7 @@ void Explore::makePlan()
   // send goal to move_base if we have something new to pursue
   auto goal = nav2_msgs::action::NavigateToPose::Goal();
   goal.pose.pose.position = target_position;
-  // Face the direction of travel so the robot does not have to turn on the
-  // spot next to an obstacle when it arrives (old code: always yaw = 0).
-  const double yaw = std::atan2(target_position.y - pose.position.y,
-                                target_position.x - pose.position.x);
-  goal.pose.pose.orientation.z = std::sin(yaw / 2.0);
-  goal.pose.pose.orientation.w = std::cos(yaw / 2.0);
+  goal.pose.pose.orientation.w = 1.;
   goal.pose.header.frame_id = costmap_client_.getGlobalFrameID();
   goal.pose.header.stamp = this->now();
 
@@ -412,144 +323,11 @@ void Explore::makePlan()
       };
 
   send_goal_options.result_callback =
-      [this, target_position,
-       target_centroid](const NavigationGoalHandle::WrappedResult& result) {
-        reachedGoal(result, target_position, target_centroid);
+      [this,
+       target_position](const NavigationGoalHandle::WrappedResult& result) {
+        reachedGoal(result, target_position);
       };
   move_base_client_->async_send_goal(goal, send_goal_options);
-}
-
-bool Explore::hasClearance(double wx, double wy, double clearance)
-{
-  nav2_costmap_2d::Costmap2D* costmap = costmap_client_.getCostmap();
-  unsigned int mx, my;
-  if (!costmap->worldToMap(wx, wy, mx, my)) {
-    return false;
-  }
-  // the goal cell itself must be known free space
-  if (costmap->getCost(mx, my) != nav2_costmap_2d::FREE_SPACE) {
-    return false;
-  }
-  const int r =
-      static_cast<int>(std::ceil(clearance / costmap->getResolution()));
-  const int size_x = static_cast<int>(costmap->getSizeInCellsX());
-  const int size_y = static_cast<int>(costmap->getSizeInCellsY());
-  for (int dy = -r; dy <= r; ++dy) {
-    for (int dx = -r; dx <= r; ++dx) {
-      if (dx * dx + dy * dy > r * r) {
-        continue;
-      }
-      const int cx = static_cast<int>(mx) + dx;
-      const int cy = static_cast<int>(my) + dy;
-      if (cx < 0 || cy < 0 || cx >= size_x || cy >= size_y) {
-        continue;
-      }
-      const unsigned char c = costmap->getCost(static_cast<unsigned int>(cx),
-                                               static_cast<unsigned int>(cy));
-      // unknown cells are fine (that is the frontier), occupied cells are not
-      if (c != nav2_costmap_2d::NO_INFORMATION &&
-          c >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool Explore::selectGoal(const frontier_exploration::Frontier& frontier,
-                         const geometry_msgs::msg::Point& robot,
-                         geometry_msgs::msg::Point& goal)
-{
-  nav2_costmap_2d::Costmap2D* costmap = costmap_client_.getCostmap();
-  std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> lock(
-      *(costmap->getMutex()));
-  const double res = costmap->getResolution();
-
-  // Frontier cells, closest to the robot first
-  std::vector<geometry_msgs::msg::Point> seeds = frontier.points;
-  if (seeds.empty()) {
-    seeds.push_back(frontier.middle);
-  }
-  auto dist2 = [&robot](const geometry_msgs::msg::Point& p) {
-    return (p.x - robot.x) * (p.x - robot.x) + (p.y - robot.y) * (p.y - robot.y);
-  };
-  std::sort(seeds.begin(), seeds.end(),
-            [&dist2](const geometry_msgs::msg::Point& a,
-                     const geometry_msgs::msg::Point& b) {
-              return dist2(a) < dist2(b);
-            });
-
-  // Try ~10 seeds spread along the frontier (keeps the cost bounded)
-  constexpr size_t kMaxSeeds = 10;
-  const size_t stride = std::max<size_t>(1, seeds.size() / kMaxSeeds);
-  for (size_t i = 0; i < seeds.size(); i += stride) {
-    const auto& p = seeds[i];
-    const double dx = robot.x - p.x;
-    const double dy = robot.y - p.y;
-    const double d = std::hypot(dx, dy);
-    if (d < 1e-3) {
-      continue;
-    }
-    const double ux = dx / d;
-    const double uy = dy / d;
-    const double max_s = std::min(max_goal_backoff_, d);
-    // Walk from the frontier cell back towards the robot
-    for (double s = res; s <= max_s; s += res) {
-      // (d - s) = distance from this point to the robot. Goals closer than
-      // min_goal_distance_ would be "reached" instantly (xy_goal_tolerance)
-      // and only make the robot turn on the spot.
-      if (d - s < min_goal_distance_) {
-        break;
-      }
-      const double wx = p.x + ux * s;
-      const double wy = p.y + uy * s;
-      unsigned int mx, my;
-      if (!costmap->worldToMap(wx, wy, mx, my)) {
-        break;
-      }
-      const unsigned char c = costmap->getCost(mx, my);
-      // crossed an obstacle: the goal would not see this frontier cell
-      if (c != nav2_costmap_2d::NO_INFORMATION &&
-          c >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
-        break;
-      }
-      if (hasClearance(wx, wy, goal_clearance_)) {
-        goal.x = wx;
-        goal.y = wy;
-        goal.z = 0.0;
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-bool Explore::goalStillUseful(
-    const std::vector<frontier_exploration::Frontier>& frontiers)
-{
-  if (goalOnBlacklist(current_goal_)) {
-    return false;
-  }
-  // The goal was placed at most max_goal_backoff_ from a frontier cell. If no
-  // frontier cell is left around it, what it was meant to reveal is known now.
-  const double reach = max_goal_backoff_ + 0.5;
-  for (const auto& f : frontiers) {
-    for (const auto& p : f.points) {
-      if (std::hypot(p.x - current_goal_.x, p.y - current_goal_.y) < reach) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-void Explore::finishExploration(const char* reason)
-{
-  RCLCPP_WARN(logger_, "Exploration complete: %s", reason);
-  auto status_msg = explore_lite_msgs::msg::ExploreStatus();
-  status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
-  status_pub_->publish(status_msg);
-  stop(true);
 }
 
 void Explore::returnToInitialPose()
@@ -580,21 +358,23 @@ void Explore::returnToInitialPose()
 }
 bool Explore::goalOnBlacklist(const geometry_msgs::msg::Point& goal)
 {
-  // Euclidean radius in metres (old code: 5 cells = 0.25 m box, smaller than
-  // the jitter of a frontier centroid, so blacklisted frontiers came back).
+  constexpr static size_t tolerace = 5;
+  nav2_costmap_2d::Costmap2D* costmap2d = costmap_client_.getCostmap();
+
+  // check if a goal is on the blacklist for goals that we're pursuing
   for (auto& frontier_goal : frontier_blacklist_) {
-    if (std::hypot(goal.x - frontier_goal.x, goal.y - frontier_goal.y) <
-        blacklist_radius_) {
+    double x_diff = fabs(goal.x - frontier_goal.x);
+    double y_diff = fabs(goal.y - frontier_goal.y);
+
+    if (x_diff < tolerace * costmap2d->getResolution() &&
+        y_diff < tolerace * costmap2d->getResolution())
       return true;
-    }
   }
   return false;
 }
 
 void Explore::reachedGoal(const NavigationGoalHandle::WrappedResult& result,
-                          const geometry_msgs::msg::Point& frontier_goal,
-                          const geometry_msgs::msg::Point& frontier_centroid)
-{
+                          const geometry_msgs::msg::Point& frontier_goal) {
   // discard stale callbacks from previously preempted goals
   if (result.goal_id != active_goal_id_) {
     return;
@@ -604,12 +384,6 @@ void Explore::reachedGoal(const NavigationGoalHandle::WrappedResult& result,
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
       RCLCPP_DEBUG(logger_, "Goal was successful");
-      // If the frontier is still there after we reached this goal, it cannot
-      // be observed from here (pocket behind an object, hole in a wall...).
-      // Blacklisting the reached goal stops the old endless loop
-      // "send same goal -> instantly succeeded -> send same goal".
-      frontier_blacklist_.push_back(frontier_goal);
-      has_goal_ = false;
       last_progress_ = this->now();
       prev_distance_ = 0;
       break;
@@ -620,18 +394,13 @@ void Explore::reachedGoal(const NavigationGoalHandle::WrappedResult& result,
                      result.result->error_code,
                      result.result->error_msg.c_str());
         frontier_blacklist_.push_back(frontier_goal);
-        frontier_blacklist_.push_back(frontier_centroid);
-        has_goal_ = false;
       } else {
         RCLCPP_DEBUG(logger_, "Goal aborted with error_code=0 — likely a preemption, not blacklisting");
       }
 #else
       // Humble: no error_code field, blacklist unconditionally on abort
-      RCLCPP_WARN(logger_, "Nav2 aborted goal (%.2f, %.2f) — blacklisting it",
-                  frontier_goal.x, frontier_goal.y);
+      RCLCPP_DEBUG(logger_, "Goal aborted — blacklisting frontier");
       frontier_blacklist_.push_back(frontier_goal);
-      frontier_blacklist_.push_back(frontier_centroid);
-      has_goal_ = false;
 #endif
       // If it was aborted probably because we've found another frontier goal,
       // so just return and don't make plan again
@@ -645,7 +414,15 @@ void Explore::reachedGoal(const NavigationGoalHandle::WrappedResult& result,
       break;
   }
   // find new goal immediately regardless of planning frequency.
-  // Because of the 1-thread-executor nature of ros2 a timer is not needed.
+  // execute via timer to prevent dead lock in move_base_client (this is
+  // callback for sendGoal, which is called in makePlan). the timer must live
+  // until callback is executed.
+  // oneshot_ = relative_nh_.createTimer(
+  //     ros::Duration(0, 0), [this](const ros::TimerEvent&) { makePlan(); },
+  //     true);
+
+  // Because of the 1-thread-executor nature of ros2 I think timer is not
+  // needed.
   makePlan();
 }
 
@@ -662,10 +439,6 @@ void Explore::stop(bool finished_exploring)
   RCLCPP_INFO(logger_, "Exploration stopped.");
 
   goal_active_ = false;
-  // After a pause (e.g. mission node investigating an animal) the goal is
-  // treated as new on resume, so the progress timer restarts instead of the
-  // frontier being blacklisted straight away.
-  has_goal_ = false;
   // Only publish paused status if manually stopped (not finished exploring)
   if (!finished_exploring) {
     auto status_msg = explore_lite_msgs::msg::ExploreStatus();
