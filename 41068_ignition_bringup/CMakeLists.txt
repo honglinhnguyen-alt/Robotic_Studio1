@@ -25,6 +25,8 @@ install(
     scripts/thermal_candidate_detector.py
     scripts/obstacle_avoidance_test.py
     scripts/stop_turn_go_controller.py
+    scripts/husky_node.py
+    scripts/mission_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
