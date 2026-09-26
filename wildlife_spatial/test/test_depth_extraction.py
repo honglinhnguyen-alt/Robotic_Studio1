@@ -1,15 +1,22 @@
 import numpy as np
 import pytest
 from builtin_interfaces.msg import Time
+from sensor_msgs.msg import Image
 from std_msgs.msg import Header
 
 from wildlife_spatial.candidate_localizer import bounding_box_indices
+from wildlife_spatial.candidate_localizer import depth_window_for_box
+from wildlife_spatial.candidate_localizer import detection_hot_mask
+from wildlife_spatial.candidate_localizer import dominant_range_cluster
+from wildlife_spatial.candidate_localizer import hot_pixel_position
 from wildlife_spatial.candidate_localizer import make_camera_point
 from wildlife_spatial.candidate_localizer import make_candidate_marker
 from wildlife_spatial.candidate_localizer import make_localized_detection
 from wildlife_spatial.candidate_localizer import make_projected_detection
 from wildlife_spatial.candidate_localizer import project_thermal_box
 from wildlife_spatial.candidate_localizer import robust_position
+from wildlife_spatial.candidate_localizer import thermal_image_to_kelvin
+from wildlife_spatial.candidate_localizer import thermal_pixel_indices
 from vision_msgs.msg import Detection2D
 from vision_msgs.msg import ObjectHypothesisWithPose
 
@@ -164,3 +171,166 @@ def test_projected_thermal_detection_defaults_to_unknown_heat_source():
     assert projected.bbox.size_y == pytest.approx(120.0)
     assert projected.results[0].hypothesis.class_id == 'unknown_heat_source'
     assert projected.results[0].hypothesis.score == pytest.approx(0.0)
+
+
+IDENTITY = np.eye(3)
+NO_OFFSET = np.zeros(3)
+
+
+def rock_in_front_of_deer(deer_has_depth=True):
+    """
+    Deer 8 m away, its middle hidden by a cold rock 3 m away.
+
+    Depth points are sampled per depth pixel (about 1/207 rad apart) and the
+    hot mask per thermal pixel (1/277 rad), like the Husky cameras. The deer
+    stays one hot region (legs beside the rock, back above it), so its box
+    covers the rock.
+    """
+    def classify(slope_y, slope_z):
+        rock = (np.abs(slope_y) < 0.2 / 3.0) & (slope_z < 0.3 / 3.0)
+        deer = (
+            ~rock
+            & (np.abs(slope_y) < 0.7 / 8.0)
+            & (slope_z > -0.38 / 8.0)
+            & (slope_z < 0.9 / 8.0)
+        )
+        return rock, deer
+
+    slopes = np.arange(-0.2, 0.2, 1.0 / 207.0)
+    slope_y, slope_z = (grid.ravel() for grid in np.meshgrid(slopes, slopes))
+    rock, deer = classify(slope_y, slope_z)
+    if not deer_has_depth:
+        deer[:] = False
+    distance = np.where(rock, 3.0, 8.0)[rock | deer]
+    points = np.column_stack((
+        distance,
+        slope_y[rock | deer] * distance,
+        slope_z[rock | deer] * distance,
+    ))
+
+    tan_half = np.tan(np.radians(30.0))
+    columns = np.arange(320)
+    rows = np.arange(240)
+    pixel_y = -((columns + 0.5) / 160.0 - 1.0) * tan_half
+    pixel_z = -((rows + 0.5) / 120.0 - 1.0) * tan_half * 0.75
+    grid_y, grid_z = np.meshgrid(pixel_y, pixel_z)
+    _, hot_mask = classify(grid_y, grid_z)
+    hot_rows, hot_columns = np.nonzero(hot_mask)
+    box = (
+        float(hot_columns.min()),
+        float(hot_rows.min()),
+        float(hot_columns.max() + 1),
+        float(hot_rows.max() + 1),
+    )
+    return points, hot_mask, box
+
+
+def test_depth_on_hot_pixels_ignores_rock_in_front_of_deer():
+    points, hot_mask, box = rock_in_front_of_deer()
+    column, row, valid = thermal_pixel_indices(
+        points, IDENTITY, NO_OFFSET, 320, 240, 60.0
+    )
+    # Previous approach: median of the central part of the box.
+    width = box[2] - box[0]
+    height = box[3] - box[1]
+    central = (
+        valid
+        & (np.abs(column + 0.5 - (box[0] + box[2]) / 2.0) < 0.375 * width)
+        & (np.abs(row + 0.5 - (box[1] + box[3]) / 2.0) < 0.375 * height)
+    )
+    box_median, _, _ = robust_position(points[central], 0.2, 20.0, 20)
+    assert box_median[0] == pytest.approx(3.0, abs=0.1)
+
+    mask = detection_hot_mask(hot_mask, box)
+    position, spread, used, hot_count = hot_pixel_position(
+        points, column, row, valid, mask, 0.2, 20.0, 20, 1.0
+    )
+    assert position[0] == pytest.approx(8.0, abs=0.05)
+    assert abs(position[1]) < 0.7
+
+
+def test_hot_target_without_depth_is_rejected_instead_of_using_rock():
+    # Beyond the depth camera range the deer has no depth points; only the
+    # rock in front of it does.
+    points, hot_mask, box = rock_in_front_of_deer(deer_has_depth=False)
+    column, row, valid = thermal_pixel_indices(
+        points, IDENTITY, NO_OFFSET, 320, 240, 60.0
+    )
+    mask = detection_hot_mask(hot_mask, box)
+
+    with pytest.raises(ValueError, match='only 0 depth points on hot'):
+        hot_pixel_position(
+            points, column, row, valid, mask, 0.2, 20.0, 20, 1.0
+        )
+
+
+def test_dominant_range_cluster_keeps_largest_group():
+    near = np.tile([5.0, 0.0, 0.0], (10, 1))
+    far = np.tile([8.0, 0.0, 0.0], (30, 1))
+    cluster = dominant_range_cluster(np.vstack((near, far)), 1.0)
+
+    assert len(cluster) == 30
+    assert np.allclose(cluster[:, 0], 8.0)
+
+
+def test_thermal_pixel_indices_follow_camera_axes():
+    points = np.array([
+        [10.0, 0.0, 0.0],
+        [10.0, 1.0, 0.0],
+        [10.0, 0.0, 1.0],
+        [-1.0, 0.0, 0.0],
+    ])
+    column, row, valid = thermal_pixel_indices(
+        points, IDENTITY, NO_OFFSET, 320, 240, 60.0
+    )
+
+    assert valid.tolist() == [True, True, True, False]
+    assert (column[0], row[0]) == (160, 120)
+    assert column[1] < 160
+    assert row[2] < 120
+
+
+def test_detection_hot_mask_erodes_edges_but_keeps_small_regions():
+    hot = np.zeros((240, 320), dtype=bool)
+    hot[100:110, 100:110] = True
+    hot[50:53, 200:203] = True
+
+    large = detection_hot_mask(hot, (100.0, 100.0, 110.0, 110.0))
+    small = detection_hot_mask(hot, (200.0, 50.0, 203.0, 53.0))
+
+    assert int(large.sum()) == 64
+    assert int(small.sum()) == 9
+
+
+def test_thermal_image_to_kelvin_reads_padded_mono16_rows():
+    values = np.array([[29315, 33015, 0], [1, 2, 3]], dtype='<u2')
+    rows = np.zeros((2, 8), dtype=np.uint8)
+    rows[:, :6] = values.view(np.uint8).reshape(2, 6)
+    image = Image()
+    image.height = 2
+    image.width = 3
+    image.encoding = 'mono16'
+    image.is_bigendian = 0
+    image.step = 8
+    image.data = rows.tobytes()
+
+    kelvin = thermal_image_to_kelvin(image, 0.01)
+
+    assert kelvin.shape == (2, 3)
+    assert kelvin[0, 0] == pytest.approx(293.15)
+    assert kelvin[0, 1] == pytest.approx(330.15)
+
+
+def test_depth_window_covers_the_thermal_box():
+    # Thermal camera 6 cm to the right of the depth camera.
+    top, bottom, left, right = depth_window_for_box(
+        (150.0, 110.0, 170.0, 130.0),
+        IDENTITY,
+        np.array([0.0, 0.06, 0.0]),
+        320, 240, 60.0,
+        720, 480, 120.0,
+    )
+
+    assert left < 360 < right
+    assert top < 240 < bottom
+    assert right - left < 60

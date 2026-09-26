@@ -120,3 +120,62 @@ def test_registry_payload_contains_mission_fields():
     assert candidate['class_name'] == 'kangaroo'
     assert candidate['position']['x'] == pytest.approx(4.0)
     assert candidate['first_seen'] == pytest.approx(10.5)
+
+
+def test_candidate_is_published_only_after_min_observations():
+    store = CandidateRegistryStore(merge_distance=1.0, min_observations=3)
+    heat = make_detection(4.0, 7.0, 0.5, 'heat_1', 'unknown_heat_source', 0.0)
+    for second in (1, 2):
+        record, is_new, _ = store.update(heat, Time(sec=second))
+        assert not is_new
+        assert not record.confirmed
+        assert store.records == []
+
+    record, is_new, _ = store.update(
+        make_detection(4.1, 7.0, 0.5, 'heat_1', 'boar', 0.8),
+        Time(sec=3),
+    )
+    assert is_new
+    assert record.confirmed
+    assert record.candidate_id == 'candidate_1'
+    assert record.observation_count == 3
+    assert store.records == [record]
+    assert registry_payload(store.records, 'husky1_map')[
+        'candidate_count'
+    ] == 1
+
+
+def test_single_wrong_observation_expires_without_a_candidate():
+    store = CandidateRegistryStore(
+        merge_distance=1.0,
+        min_observations=2,
+        tentative_max_age=5.0,
+    )
+    tree = make_detection(-7.0, -3.7, 0.3, 'heat_2', 'unknown', 0.0)
+    store.update(tree, Time(sec=1))
+    store.update(
+        make_detection(4.0, 7.0, 0.5, 'heat_1', 'boar', 0.8),
+        Time(sec=10),
+    )
+    assert all(record.x > 0.0 for record in store.tentative)
+
+    record, is_new, _ = store.update(tree, Time(sec=11))
+    assert not is_new
+    assert record.observation_count == 1
+    assert store.records == []
+
+
+def test_candidate_ids_follow_confirmation_order():
+    store = CandidateRegistryStore(merge_distance=1.0, min_observations=2)
+    store.update(make_detection(0.0, 0.0, 0.0, 'a', 'boar', 0.8), Time(sec=1))
+    store.update(make_detection(5.0, 0.0, 0.0, 'b', 'deer', 0.8), Time(sec=2))
+    second, is_new, _ = store.update(
+        make_detection(5.1, 0.0, 0.0, 'b', 'deer', 0.8),
+        Time(sec=3),
+    )
+
+    assert is_new
+    assert second.candidate_id == 'candidate_1'
+    assert [record.candidate_id for record in store.records] == [
+        'candidate_1'
+    ]

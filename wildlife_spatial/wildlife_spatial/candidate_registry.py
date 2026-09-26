@@ -74,30 +74,59 @@ class CandidateRecord:
     class_name: str = 'unknown'
     confidence: float = 0.0
     source_ids: set = field(default_factory=set)
+    confirmed: bool = True
 
 
 class CandidateRegistryStore:
-    """Merge observations into stable records using planar map distance."""
+    """
+    Merge observations into stable records using planar map distance.
 
-    def __init__(self, merge_distance=1.0):
+    A new position first becomes a tentative record. It is confirmed, gets
+    its candidate_N ID and is published only after min_observations
+    localized observations within merge_distance. A tentative record that
+    is not seen again within tentative_max_age seconds is dropped, so a
+    single wrong depth estimate never becomes a candidate.
+    """
+
+    def __init__(
+        self,
+        merge_distance=1.0,
+        min_observations=1,
+        tentative_max_age=10.0,
+    ):
         if merge_distance <= 0.0:
             raise ValueError('merge_distance must be greater than zero')
+        if min_observations < 1:
+            raise ValueError('min_observations must be at least one')
+        if tentative_max_age <= 0.0:
+            raise ValueError('tentative_max_age must be greater than zero')
         self.merge_distance = float(merge_distance)
+        self.min_observations = int(min_observations)
+        self.tentative_max_age_ns = int(
+            float(tentative_max_age) * NANOSECONDS_PER_SECOND
+        )
         self.records = []
+        self.tentative = []
 
     def update(self, detection, stamp):
-        """Store an observation and return record, new flag, and distance."""
+        """
+        Store an observation and return record, new flag, and distance.
+
+        The new flag is True when this observation creates or confirms a
+        candidate. A tentative record is returned with the flag False.
+        """
         position = detection.bbox.center.position
         x = float(position.x)
         y = float(position.y)
         z = float(position.z)
         timestamp_ns = stamp_nanoseconds(stamp)
         class_name, confidence = best_classification(detection)
+        self._drop_old_tentative(timestamp_ns)
 
         record, distance = self._closest(x, y)
         if record is None or distance > self.merge_distance:
             record = CandidateRecord(
-                candidate_id=f'candidate_{len(self.records) + 1}',
+                candidate_id='',
                 x=x,
                 y=y,
                 z=z,
@@ -106,9 +135,10 @@ class CandidateRegistryStore:
                 class_name=class_name,
                 confidence=confidence,
                 source_ids={detection.id} if detection.id else set(),
+                confirmed=False,
             )
-            self.records.append(record)
-            return record, True, None
+            self.tentative.append(record)
+            return record, self._confirm_if_ready(record), None
 
         previous_count = record.observation_count
         record.observation_count += 1
@@ -129,14 +159,32 @@ class CandidateRegistryStore:
             record.confidence = confidence
 
         assert record.observation_count == previous_count + 1
-        return record, False, distance
+        return record, self._confirm_if_ready(record), distance
+
+    def _confirm_if_ready(self, record):
+        if record.confirmed:
+            return False
+        if record.observation_count < self.min_observations:
+            return False
+        record.confirmed = True
+        record.candidate_id = f'candidate_{len(self.records) + 1}'
+        self.tentative.remove(record)
+        self.records.append(record)
+        return True
+
+    def _drop_old_tentative(self, timestamp_ns):
+        self.tentative = [
+            record for record in self.tentative
+            if timestamp_ns - record.last_seen_ns <= self.tentative_max_age_ns
+        ]
 
     def _closest(self, x, y):
-        if not self.records:
+        candidates = self.records + self.tentative
+        if not candidates:
             return None, None
 
         record = min(
-            self.records,
+            candidates,
             key=lambda item: hypot(x - item.x, y - item.y),
         )
         return record, hypot(x - record.x, y - record.y)
@@ -263,6 +311,9 @@ class CandidateRegistry(Node):
         )
         self.declare_parameter('map_frame', 'husky1_map')
         self.declare_parameter('merge_distance', 1.0)
+        # A candidate is published after this many localized observations.
+        self.declare_parameter('min_observations', 3)
+        self.declare_parameter('tentative_max_age', 10.0)
         self.declare_parameter('marker_diameter', 0.5)
 
         input_topic = str(self.get_parameter('input_topic').value)
@@ -273,6 +324,12 @@ class CandidateRegistry(Node):
         marker_topic = str(self.get_parameter('marker_topic').value)
         self._map_frame = str(self.get_parameter('map_frame').value)
         merge_distance = float(self.get_parameter('merge_distance').value)
+        min_observations = int(
+            self.get_parameter('min_observations').value
+        )
+        tentative_max_age = float(
+            self.get_parameter('tentative_max_age').value
+        )
         self._marker_diameter = float(
             self.get_parameter('marker_diameter').value
         )
@@ -282,7 +339,11 @@ class CandidateRegistry(Node):
         if self._marker_diameter <= 0.0:
             raise ValueError('marker_diameter must be greater than zero')
 
-        self._store = CandidateRegistryStore(merge_distance)
+        self._store = CandidateRegistryStore(
+            merge_distance,
+            min_observations,
+            tentative_max_age,
+        )
 
         snapshot_qos = QoSProfile(depth=1)
         snapshot_qos.reliability = ReliabilityPolicy.RELIABLE
@@ -317,7 +378,9 @@ class CandidateRegistry(Node):
         )
         self.get_logger().info(
             f'Map frame: {self._map_frame}; '
-            f'merge distance: {merge_distance:.2f} m'
+            f'merge distance: {merge_distance:.2f} m; '
+            f'confirmed after {min_observations} observations '
+            f'within {tentative_max_age:.1f} s'
         )
 
     def _localized_callback(self, message):
@@ -334,13 +397,23 @@ class CandidateRegistry(Node):
                 detection,
                 message.header.stamp,
             )
+            if not record.confirmed:
+                self.get_logger().info(
+                    'Tentative observation at '
+                    f'({record.x:.3f}, {record.y:.3f}, {record.z:.3f}) m: '
+                    f'{record.observation_count}/'
+                    f'{self._store.min_observations}; '
+                    f'class={record.class_name} {record.confidence:.2f}'
+                )
+                continue
             changed = True
             if is_new:
                 self.get_logger().info(
                     f'Created {record.candidate_id} at '
                     f'({record.x:.3f}, {record.y:.3f}, '
                     f'{record.z:.3f}) m; class={record.class_name} '
-                    f'{record.confidence:.2f}'
+                    f'{record.confidence:.2f}; '
+                    f'observations={record.observation_count}'
                 )
             else:
                 self.get_logger().info(
