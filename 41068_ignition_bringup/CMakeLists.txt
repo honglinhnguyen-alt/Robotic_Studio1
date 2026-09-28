@@ -27,6 +27,7 @@ install(
     scripts/stop_turn_go_controller.py
     scripts/husky_node.py
     scripts/mission_node.py
+    scripts/heat_source_logger.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -35,6 +36,7 @@ install(
 install(
   FILES
     scripts/perception_common.py
+    scripts/perception_overlay.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

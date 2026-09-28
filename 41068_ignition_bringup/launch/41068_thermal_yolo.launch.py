@@ -20,6 +20,7 @@ def generate_launch_description():
     verification_frames = LaunchConfiguration('verification_frames')
     verification_min_votes = LaunchConfiguration('verification_min_votes')
     device = LaunchConfiguration('device')
+    auto_verify_on_heat = LaunchConfiguration('auto_verify_on_heat')
 
     package_share = FindPackageShare('41068_ignition_bringup')
     default_config = PathJoinSubstitution([
@@ -88,6 +89,14 @@ def generate_launch_description():
             description='Votes required for one class to be accepted.',
         ),
         DeclareLaunchArgument(
+            'auto_verify_on_heat',
+            default_value='true',
+            description=(
+                'true: YOLO votes whenever heat appears. false: YOLO runs only '
+                'when perception/verify_now is called (mission mode).'
+            ),
+        ),
+        DeclareLaunchArgument(
             'device',
             default_value='',
             description='Ultralytics device override: cpu, 0, etc.',
@@ -147,6 +156,10 @@ def generate_launch_description():
                         value_type=int,
                     ),
                     'device': ParameterValue(device, value_type=str),
+                    'auto_verify_on_heat': ParameterValue(
+                        auto_verify_on_heat,
+                        value_type=bool,
+                    ),
                 },
             ],
         ),

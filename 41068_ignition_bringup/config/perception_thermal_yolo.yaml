@@ -77,8 +77,8 @@
     # box (+20 %), or when they overlap by this fraction of the smaller box.
     minimum_thermal_overlap: 0.5
 
-    native_classes: [kangaroo]
-    exotic_classes: [boar, deer]
+    native_classes: [kangaroo, deer]
+    exotic_classes: [boar]
     fused_detections_topic: perception/thermal_yolo/detections
     classification_topic: perception/thermal_yolo/result
     publish_legacy_result: true

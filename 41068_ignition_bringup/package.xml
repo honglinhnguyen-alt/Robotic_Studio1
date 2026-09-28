@@ -34,6 +34,9 @@
   <exec_depend>vision_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
 
+  <!-- Mission layer (mission_node reads explore_lite status) -->
+  <exec_depend>explore_lite_msgs</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

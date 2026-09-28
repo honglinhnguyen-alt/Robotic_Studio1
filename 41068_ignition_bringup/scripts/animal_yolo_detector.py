@@ -13,8 +13,17 @@ Outputs:
   perception/thermal_yolo/result            std_msgs/msg/String (JSON)
   Yolo_result                               std_msgs/msg/String (legacy CSV)
 
-Service:
+Services:
   perception/rgb/classify_now               std_srvs/srv/Trigger
+  perception/verify_now                     std_srvs/srv/Trigger
+      Mission request: restart the thermal-gated vote window now (after the
+      Husky reached its observation pose). The response message is JSON with
+      a request_id; the consensus JSON on perception/thermal_yolo/result
+      carries the same request_id so the mission can ignore older results.
+      A mission vote covers ONE heat region only: the one nearest the image
+      centre (the Husky is facing its candidate). Other animals in view are
+      not classified or published; they stay unknown until the mission
+      investigates them.
 
 When ``thermal_gate_enabled`` is true, YOLO remains idle until the thermal
 detector publishes at least one hot region. The hot region is projected into
@@ -30,6 +39,7 @@ for YOLO is reported as ``too_far``, and one cut by the thermal image edge as
 """
 
 import json
+import math
 from collections import Counter, deque
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -122,6 +132,14 @@ class AnimalYoloDetector(Node):
         # regions are reported as partial and get no vote. 0 disables.
         self.declare_parameter('thermal_edge_margin_px', 1.0)
         self.declare_parameter('thermal_retrigger_sec', 0.0)
+        # true : a new heat region starts a YOLO vote by itself (standalone
+        #        perception testing).
+        # false: YOLO stays idle until perception/verify_now is called, i.e.
+        #        only after the Husky has reached its observation pose.
+        self.declare_parameter('auto_verify_on_heat', True)
+        # A mission vote only follows the heat region within this angle of
+        # the thermal image centre (the Husky faces the candidate first).
+        self.declare_parameter('request_target_max_offset_deg', 20.0)
         self.declare_parameter('verification_frames', 5)
         self.declare_parameter('verification_min_votes', 3)
 
@@ -192,6 +210,16 @@ class AnimalYoloDetector(Node):
             'perception/rgb/classify_now',
             self._classify_now_callback,
         )
+        # Mission-triggered verification (Husky node calls this after it has
+        # reached an observation pose and faced the candidate).
+        self.verify_service = self.create_service(
+            Trigger,
+            'perception/verify_now',
+            self._verify_now_callback,
+        )
+        self.pending_request_id: Optional[int] = None
+        self.request_target_id: Optional[str] = None
+        self.next_request_id = 1
 
         self.thermal_sub = None
         thermal_gate_enabled = bool(
@@ -257,7 +285,11 @@ class AnimalYoloDetector(Node):
                 'precedence over continuous inference.'
             )
 
-        mode = 'thermal-gated' if thermal_gate_enabled else (
+        auto_verify = bool(self.get_parameter('auto_verify_on_heat').value)
+        mode = (
+            ('thermal-gated' if auto_verify else 'thermal-gated, on request only')
+            if thermal_gate_enabled else None
+        ) or (
             'continuous' if bool(self.get_parameter('continuous').value)
             else 'service-only'
         )
@@ -303,6 +335,7 @@ class AnimalYoloDetector(Node):
                 self.window_candidate_ids = set()
                 self.latest_thermal_msg = None
                 self._reset_verification()
+                self._abort_pending_request(msg, 'no_heat')
             return
         self.empty_thermal_frames = 0
 
@@ -326,7 +359,15 @@ class AnimalYoloDetector(Node):
             retrigger_sec > 0.0
             and now_ns - self.last_thermal_trigger_ns >= int(retrigger_sec * 1e9)
         )
-        if not self.thermal_active:
+        if (
+            self.pending_request_id is not None
+            or not bool(self.get_parameter('auto_verify_on_heat').value)
+        ):
+            # A mission vote is running (it follows only its target region),
+            # or request-only mode: remember the heat regions for verify_now,
+            # but never start or restart a vote here.
+            self.thermal_active = True
+        elif not self.thermal_active:
             self.thermal_active = True
             self._start_verification(msg, reason='new heat event')
         elif candidates_changed:
@@ -370,6 +411,7 @@ class AnimalYoloDetector(Node):
         )
 
     def _reset_verification(self) -> None:
+        self.request_target_id = None
         self.verification_active = False
         self.verification_candidate_ids = []
         self.verification_votes = {}
@@ -462,6 +504,14 @@ class AnimalYoloDetector(Node):
                     )
                 return
             thermal_msg = closest
+        if (
+            self.request_target_id is not None
+            and thermal_msg.detections
+            and not self._follow_request_target(thermal_msg)
+        ):
+            # The target heat region is not in this thermal frame.
+            self.verification_last_frame_number = self.latest_frame_number
+            return
         if not thermal_msg.detections:
             # At the RGB capture time the heat source was not visible.
             self.verification_last_frame_number = self.latest_frame_number
@@ -500,6 +550,135 @@ class AnimalYoloDetector(Node):
         frame_number = self.latest_frame_number
         self._run_inference(msg, publish_confirmation=False)
         self.last_processed_frame_number = frame_number
+
+    def _verify_now_callback(self, _request, response):
+        """Start a fresh multi-frame thermal+YOLO vote for the mission."""
+        if self.thermal_sub is None:
+            response.success = False
+            response.message = json.dumps({
+                'status': 'thermal_gate_disabled',
+            })
+            return response
+        thermal_msg = self.latest_thermal_msg
+        if (
+            not self.thermal_active
+            or thermal_msg is None
+            or not thermal_msg.detections
+        ):
+            response.success = False
+            response.message = json.dumps({'status': 'no_heat_in_view'})
+            return response
+
+        target_id, offset = self._central_region(thermal_msg)
+        if target_id is None:
+            response.success = False
+            response.message = json.dumps({
+                'status': 'no_heat_in_view',
+                'detail': 'no heat region within '
+                f'{float(self.get_parameter("request_target_max_offset_deg").value):.0f}'
+                ' deg of the image centre',
+            })
+            return response
+
+        request_id = self.next_request_id
+        self.next_request_id += 1
+        self.pending_request_id = request_id
+        # Restart the window so every vote comes from the observation pose,
+        # not from frames captured while the robot was still driving.
+        self._start_verification(
+            thermal_msg,
+            reason=f'mission request {request_id}',
+        )
+        # Vote for the target region only. Fusion still sees every region,
+        # so a neighbour's YOLO box stays with the neighbour.
+        self.request_target_id = target_id
+        self.verification_candidate_ids = [target_id]
+        self.verification_votes = {target_id: []}
+        self.get_logger().info(
+            f'Mission request {request_id}: target {target_id} '
+            f'({offset:.1f} deg from centre); '
+            f'{len(thermal_msg.detections) - 1} other heat region(s) ignored.'
+        )
+        response.success = True
+        response.message = json.dumps({
+            'status': 'started',
+            'request_id': request_id,
+            'target_id': target_id,
+            'target_offset_deg': round(offset, 1),
+            'regions': len(thermal_msg.detections),
+        })
+        return response
+
+    def _region_offset_deg(self, detection) -> float:
+        """Horizontal angle of a thermal box centre from the image centre."""
+        x1, _y1, x2, _y2 = self._detection_box(detection)
+        width = float(self.get_parameter('thermal_image_width').value)
+        hfov = math.radians(float(self.get_parameter('thermal_hfov_deg').value))
+        focal = 0.5 * width / math.tan(0.5 * hfov)
+        return math.degrees(math.atan2(0.5 * (x1 + x2) - 0.5 * width, focal))
+
+    def _central_region(
+        self,
+        thermal_msg: Detection2DArray,
+    ) -> Tuple[Optional[str], Optional[float]]:
+        """ID and offset of the heat region nearest the image centre."""
+        limit = float(self.get_parameter('request_target_max_offset_deg').value)
+        best: Optional[Tuple[str, float]] = None
+        for candidate_id, detection in zip(
+            self._candidate_ids(thermal_msg),
+            thermal_msg.detections,
+        ):
+            offset = abs(self._region_offset_deg(detection))
+            if offset <= limit and (best is None or offset < best[1]):
+                best = (candidate_id, offset)
+        return best if best is not None else (None, None)
+
+    def _follow_request_target(self, thermal_msg: Detection2DArray) -> bool:
+        """Keep the vote on the target, even if its track ID changed."""
+        if self.request_target_id in self._candidate_ids(thermal_msg):
+            return True
+        new_id, _offset = self._central_region(thermal_msg)
+        if new_id is None:
+            return False
+        old_id = self.request_target_id
+        self.get_logger().info(
+            f'Target heat region re-identified: {old_id} -> {new_id}.'
+        )
+        self.verification_votes[new_id] = self.verification_votes.pop(old_id, [])
+        if old_id in self.verification_status_counts:
+            self.verification_status_counts[new_id] = (
+                self.verification_status_counts.pop(old_id)
+            )
+        if old_id in self.verification_last_match:
+            self.verification_last_match[new_id] = (
+                self.verification_last_match.pop(old_id)
+            )
+        self.verification_candidate_ids = [new_id]
+        self.request_target_id = new_id
+        return True
+
+    def _abort_pending_request(self, thermal_msg, status: str) -> None:
+        """Tell the mission that its requested vote cannot finish."""
+        if self.pending_request_id is None:
+            return
+        payload = {
+            'status': status,
+            'request_id': self.pending_request_id,
+            'trigger': 'request',
+            'classified_regions': 0,
+            'total_regions': 0,
+            'thermal_stamp': self._stamp_payload(thermal_msg.header.stamp),
+            'items': [],
+        }
+        result_msg = String()
+        result_msg.data = json.dumps(payload, separators=(',', ':'), sort_keys=True)
+        self.classification_pub.publish(result_msg)
+        self.get_logger().warning(
+            f'Mission verification request {self.pending_request_id} '
+            f'aborted: {status}.'
+        )
+        self.pending_request_id = None
+        self.request_target_id = None
 
     def _classify_now_callback(self, _request, response):
         """Classify the newest RGB frame after navigation reaches a viewpoint."""
@@ -600,7 +779,10 @@ class AnimalYoloDetector(Node):
                     })
 
             # An empty array means "inference ran and found nothing".
-            self.detections_pub.publish(detections_msg)
+            # During a mission vote only the target's box is published (below).
+            target_only = collect_verification and self.request_target_id is not None
+            if not target_only:
+                self.detections_pub.publish(detections_msg)
 
             if thermal_detections is not None:
                 (
@@ -615,6 +797,16 @@ class AnimalYoloDetector(Node):
                     records,
                     publish_result=not collect_verification,
                 )
+                if target_only:
+                    target_msg = Detection2DArray()
+                    target_msg.header = source_msg.header
+                    for item, record in zip(result_items, matched_records):
+                        if (
+                            record is not None
+                            and item['candidate_id'] == self.request_target_id
+                        ):
+                            target_msg.detections.append(record['detection'])
+                    self.detections_pub.publish(target_msg)
                 if collect_verification:
                     verification_frame_number = self.verification_frames_seen + 1
                     consensus_image = self._record_verification_frame(
@@ -864,12 +1056,24 @@ class AnimalYoloDetector(Node):
                 )
                 self.legacy_result_pub.publish(legacy_msg)
 
+        shown = [
+            index for index, item in enumerate(result_items)
+            if self.request_target_id is None
+            or item['candidate_id'] == self.request_target_id
+        ]
+        if self.request_target_id is not None:
+            labels = [
+                f'{item["class_name"]} {float(item["confidence"]):.2f} '
+                f'[{item["category"]}]'
+                for item in (result_items[index] for index in shown)
+                if item['status'] == 'classified'
+            ]
         annotated = self._annotate_thermal_result(
             image_bgr,
-            projected_rois,
-            matched_records,
-            candidate_ids,
-            result_items,
+            [projected_rois[index] for index in shown],
+            [matched_records[index] for index in shown],
+            [candidate_ids[index] for index in shown],
+            [result_items[index] for index in shown],
             title=(
                 f'Verifying frame {self.verification_frames_seen + 1}/'
                 f'{self._verification_frame_target()}'
@@ -890,6 +1094,11 @@ class AnimalYoloDetector(Node):
         frame_index = self.verification_frames_seen + 1
         for item, record in zip(result_items, matched_records):
             candidate_id = str(item['candidate_id'])
+            if (
+                self.request_target_id is not None
+                and candidate_id != self.request_target_id
+            ):
+                continue  # mission vote: other heat regions get no votes
             self.verification_votes.setdefault(candidate_id, [])
             self.verification_status_counts.setdefault(candidate_id, Counter())[
                 str(item['status'])
@@ -1044,8 +1253,12 @@ class AnimalYoloDetector(Node):
         classified_count = sum(
             item['status'] == 'classified' for item in result_items
         )
+        request_id = self.pending_request_id
+        self.pending_request_id = None
         payload = {
             'status': 'classified' if classified_count else 'unresolved',
+            'request_id': request_id,
+            'trigger': 'request' if request_id is not None else 'auto',
             'classified_regions': classified_count,
             'total_regions': len(result_items),
             'verification_frames': frame_count,
@@ -1084,8 +1297,9 @@ class AnimalYoloDetector(Node):
                 self.legacy_result_pub.publish(legacy_msg)
 
         self.get_logger().info(
-            f'Consensus classification after {frame_count} RGB frames: '
-            + '; '.join(log_items)
+            f'Consensus classification after {frame_count} RGB frames'
+            + (f' (mission request {request_id})' if request_id is not None else '')
+            + ': ' + '; '.join(log_items)
         )
         projected_rois = [
             self._payload_box(item.get('projected_rgb_roi'))

@@ -246,9 +246,9 @@ def record_markers(record, header, marker_diameter=0.5):
     label.pose.position.z = record.z + 0.6
     label.pose.orientation.w = 1.0
     label.scale.z = 0.3
-    label.color.r = 1.0
-    label.color.g = 1.0
-    label.color.b = 1.0
+    label.color.r = 0.0
+    label.color.g = 0.0
+    label.color.b = 0.0
     label.color.a = 1.0
     label.text = (
         f'{record.candidate_id}: {record.class_name} '

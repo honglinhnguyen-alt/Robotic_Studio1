@@ -1,0 +1,74 @@
+# Mission layer parameters (mission_node.py + husky_node.py).
+# Loaded by launch/41068_mission.launch.py. All topics are absolute.
+
+/**/mission_node:
+  ros__parameters:
+    map_frame: husky1_map
+    base_frame: husky1_base_link
+
+    # Inputs
+    registry_topic: /husky1/candidates/registry_json        # R2 candidate_registry
+    test_candidate_topic: /husky1/mission/test_candidate    # manual Point for tests
+    yolo_result_topic: /husky1/perception/thermal_yolo/result
+    husky_status_topic: /husky1/mission/husky_status
+    explore_status_topic: /husky1/explore/status
+    # Outputs
+    husky_command_topic: /husky1/mission/investigate
+    explore_resume_topic: /husky1/explore/resume
+    mission_status_topic: /husky1/mission/status
+
+    confirm_confidence: 0.70          # R6: confirm a class only at >= 0.70
+    max_attempts: 3                   # R4 / C1 3.3: 3 attempts, then UNRESOLVED
+    # Heat clearly seen but no animal box in this many attempts -> REJECTED
+    reject_after_no_animal_views: 2
+    # A new registry record this close to an investigated candidate is
+    # treated as the same animal (DUPLICATE). Must be > registry merge
+    # distance (1.0 m) to have any effect. 0 disables.
+    duplicate_radius: 1.5
+    # ...and only when both records came from the same thermal track, so a
+    # different animal standing next to it is still investigated later.
+    duplicate_requires_shared_track: true
+    # explore_lite cancels every Nav2 goal when paused; wait before the Husky
+    # node sends its goal so that cancel cannot hit it.
+    pause_settle_sec: 1.5
+    # per attempt, until YOLO verification starts. Keep it longer than
+    # husky max_goal_tries x nav_timeout_sec (3 x 90 s) + turning + settling.
+    husky_timeout_sec: 330.0
+    verify_timeout_sec: 25.0          # YOLO consensus must arrive within this
+    # Which thermal region is "this candidate": bearing error tolerance
+    bearing_tolerance_deg: 15.0
+    thermal_image_width: 320          # must match the thermal camera
+    thermal_hfov_deg: 60.0
+    resume_exploration_on_start: true
+    status_period_sec: 0.5
+
+/**/husky_node:
+  ros__parameters:
+    map_frame: husky1_map
+    base_frame: husky1_base_link
+    command_topic: /husky1/mission/investigate
+    status_topic: /husky1/mission/husky_status
+    map_topic: /husky1/map
+    navigate_action: /husky1/navigate_to_pose
+    spin_action: /husky1/spin
+    verify_service: /husky1/perception/verify_now
+
+    # C1 3.3: observation pose 2-4 m from the candidate.
+    # Keep the decimal point in these lists (ROS declares them as doubles).
+    # Attempt k uses element k-1: distance and rotation of the view around
+    # the candidate (0 = the robot's side).
+    standoff_distances: [3.0, 2.2, 2.6]
+    attempt_angle_offsets_deg: [0.0, 50.0, -50.0]
+    # Directions tried around that view until a free pose is found
+    search_offsets_deg: [0.0, 25.0, -25.0, 50.0, -50.0, 80.0, -80.0, 120.0, -120.0, 180.0]
+    clearance_radius: 0.6             # m of free SLAM-map cells around a pose
+    max_goal_tries: 3                 # R4: at most 3 Nav2 goals per attempt
+    nav_timeout_sec: 90.0
+    # Attempt 1 only: already within this distance -> just turn and look
+    look_from_current_within: 4.0
+    min_view_distance: 1.5
+    face_tolerance_deg: 10.0
+    spin_time_allowance_sec: 15.0
+    settle_sec: 1.5                   # stand still before asking YOLO
+    verify_retries: 4                 # thermal needs 3 frames after turning
+    verify_retry_sec: 1.0
