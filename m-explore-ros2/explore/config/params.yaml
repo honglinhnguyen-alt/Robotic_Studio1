@@ -7,6 +7,7 @@
     visualize: true
     planner_frequency: 0.15
     progress_timeout: 30.0
+    goal_useful_radius: 1.0 #Luke's
     potential_scale: 3.0
     orientation_scale: 0.0
     gain_scale: 1.0

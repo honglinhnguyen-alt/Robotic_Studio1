@@ -65,6 +65,9 @@ Explore::Explore()
   double min_frontier_size;
   this->declare_parameter<float>("planner_frequency", 1.0);
   this->declare_parameter<float>("progress_timeout", 30.0);
+
+  this->declare_parameter<double>("goal_useful_radius", 1.0);//Luke's
+
   this->declare_parameter<bool>("visualize", false);
   this->declare_parameter<float>("potential_scale", 1e-3);
   this->declare_parameter<float>("orientation_scale", 0.0);
@@ -74,6 +77,9 @@ Explore::Explore()
 
   this->get_parameter("planner_frequency", planner_frequency_);
   this->get_parameter("progress_timeout", timeout);
+
+  this->get_parameter("goal_useful_radius", goal_useful_radius_);//Luke's
+
   this->get_parameter("visualize", visualize_);
   this->get_parameter("potential_scale", potential_scale_);
   this->get_parameter("orientation_scale", orientation_scale_);
@@ -305,47 +311,68 @@ void Explore::makePlan()
   // ---------------------------------------------------------
   if (goal_active_ && has_goal_) {
 
-    const double dist_to_goal =
-        std::hypot(
-            pose.position.x - current_goal_.x,
-            pose.position.y - current_goal_.y);
+    // First check whether the area around the committed goal
+    // still contains unexplored frontier.
+    if (goalStillUseful(frontiers)) {
 
-    // Count progress only if Husky moved at least 10 cm closer.
-    if (dist_to_goal < prev_distance_ - 0.10) {
-      prev_distance_ = dist_to_goal;
-      last_progress_ = this->now();
-    }
+      const double dist_to_goal =
+          std::hypot(
+              pose.position.x - current_goal_.x,
+              pose.position.y - current_goal_.y);
 
-    // If Husky has made no progress for too long,
-    // give up this goal and allow a new one to be selected.
-    if ((this->now() - last_progress_ >
-         tf2::durationFromSec(progress_timeout_)) &&
-        !resuming_) {
+      // Count progress only if Husky moved at least 10 cm closer.
+      if (dist_to_goal < prev_distance_ - 0.10) {
+        prev_distance_ = dist_to_goal;
+        last_progress_ = this->now();
+      }
 
-      RCLCPP_WARN(
-          logger_,
-          "No progress towards committed goal (%.2f, %.2f) for %.0f s. "
-          "Blacklisting and selecting a new goal.",
-          current_goal_.x,
-          current_goal_.y,
-          progress_timeout_);
+      // If Husky has made no progress for too long,
+      // give up this goal and allow a new one to be selected.
+      if ((this->now() - last_progress_ >
+          tf2::durationFromSec(progress_timeout_)) &&
+          !resuming_) {
 
-      frontier_blacklist_.push_back(current_goal_);
-      has_goal_ = false;
+        RCLCPP_WARN(
+            logger_,
+            "No progress towards committed goal (%.2f, %.2f) for %.0f s. "
+            "Blacklisting and selecting a new goal.",
+            current_goal_.x,
+            current_goal_.y,
+            progress_timeout_);
 
-      // Continue below and choose a new frontier.
+        frontier_blacklist_.push_back(current_goal_);
+        has_goal_ = false;
+
+        // Continue below and choose another frontier.
+
+      } else {
+
+        RCLCPP_INFO(
+            logger_,
+            "Keeping committed goal (%.2f, %.2f), %.2f m remaining",
+            current_goal_.x,
+            current_goal_.y,
+            dist_to_goal);
+
+        resuming_ = false;
+        return;
+      }
 
     } else {
 
+      // The frontier around Goal A has disappeared.
+      // The area has already been explored, so A is no longer useful.
       RCLCPP_INFO(
           logger_,
-          "Keeping committed goal (%.2f, %.2f), %.2f m remaining",
+          "Area around committed goal (%.2f, %.2f) already explored. "
+          "Selecting a new frontier.",
           current_goal_.x,
-          current_goal_.y,
-          dist_to_goal);
+          current_goal_.y);
 
-      resuming_ = false;
-      return;
+      has_goal_ = false;
+
+      // Do NOT return here.
+      // Continue below so a new frontier goal can be selected.
     }
   }
 
@@ -459,6 +486,48 @@ void Explore::returnToInitialPose()
       };
   move_base_client_->async_send_goal(goal, send_goal_options);
 }
+
+bool Explore::goalStillUseful( //Luke's
+    const std::vector<frontier_exploration::Frontier>& frontiers)
+{
+  // If this goal has already been blacklisted, do not keep it.
+  if (goalOnBlacklist(current_goal_)) {
+    return false;
+  }
+
+  // Check whether any current frontier is still close to the
+  // committed goal. If yes, there is still unknown space around A.
+  for (const auto& frontier : frontiers) {
+
+    // Check the frontier centroid as a quick test.
+    const double centroid_distance =
+        std::hypot(
+            frontier.centroid.x - current_goal_.x,
+            frontier.centroid.y - current_goal_.y);
+
+    if (centroid_distance <= goal_useful_radius_) {
+      return true;
+    }
+
+    // Also check individual frontier points because the centroid
+    // can move while the same frontier is gradually being explored.
+    for (const auto& point : frontier.points) {
+      const double distance =
+          std::hypot(
+              point.x - current_goal_.x,
+              point.y - current_goal_.y);
+
+      if (distance <= goal_useful_radius_) {
+        return true;
+      }
+    }
+  }
+
+  // No frontier remains around Goal A.
+  // The area has already been explored.
+  return false;
+}
+
 bool Explore::goalOnBlacklist(const geometry_msgs::msg::Point& goal)
 {
   constexpr static size_t tolerace = 5;

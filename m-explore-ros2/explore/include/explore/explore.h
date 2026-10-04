@@ -98,6 +98,9 @@ private:
 
   bool goalOnBlacklist(const geometry_msgs::msg::Point& goal);
 
+  bool goalStillUseful(
+    const std::vector<frontier_exploration::Frontier>& frontiers);// Luke's update
+
   NavigationGoalHandle::SharedPtr navigation_goal_handle_;
   // void
   // goal_response_callback(std::shared_future<NavigationGoalHandle::SharedPtr>
@@ -149,6 +152,9 @@ private:
   double planner_frequency_;
   double potential_scale_, orientation_scale_, gain_scale_;
   double progress_timeout_;
+
+  double goal_useful_radius_;//Luke's
+
   bool visualize_;
   bool return_to_init_;
   std::string robot_base_frame_;
