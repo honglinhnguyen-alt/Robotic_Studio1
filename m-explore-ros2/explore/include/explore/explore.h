@@ -127,9 +127,18 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr resume_subscription_;
   void resumeCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
+  // std::vector<geometry_msgs::msg::Point> frontier_blacklist_;
+  // geometry_msgs::msg::Point prev_goal_;
+  // double prev_distance_;
+  
   std::vector<geometry_msgs::msg::Point> frontier_blacklist_;
-  geometry_msgs::msg::Point prev_goal_;
+
+  // Goal that the robot has committed to.
+  geometry_msgs::msg::Point current_goal_;
+  bool has_goal_{false};
+
   double prev_distance_;
+
   rclcpp::Time last_progress_;
   size_t last_markers_count_;
 

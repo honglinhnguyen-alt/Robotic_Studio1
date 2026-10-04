@@ -40,14 +40,15 @@
 
 #include <thread>
 
-inline static bool same_point(const geometry_msgs::msg::Point& one,
-                              const geometry_msgs::msg::Point& two)
-{
-  double dx = one.x - two.x;
-  double dy = one.y - two.y;
-  double dist = sqrt(dx * dx + dy * dy);
-  return dist < 0.01;
-}
+// inline static bool same_point(const geometry_msgs::msg::Point& one,
+//                               const geometry_msgs::msg::Point& two)
+// {
+//   double dx = one.x - two.x;
+//   double dy = one.y - two.y;
+//   double dist = sqrt(dx * dx + dy * dy);
+//   return dist < 0.01;
+// }
+// commented for Luke's new update
 
 namespace explore
 {
@@ -252,50 +253,146 @@ void Explore::makePlan()
   }
 
   // find non blacklisted frontier
+  // auto frontier =
+  //     std::find_if_not(frontiers.begin(), frontiers.end(),
+  //                      [this](const frontier_exploration::Frontier& f) {
+  //                        return goalOnBlacklist(f.centroid);
+  //                      });
+  // if (frontier == frontiers.end()) {
+  //   RCLCPP_WARN(logger_, "All frontiers traversed/tried out, stopping.");
+  //   auto status_msg = explore_lite_msgs::msg::ExploreStatus();
+  //   status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
+  //   status_pub_->publish(status_msg);
+  //   stop(true);
+  //   return;
+  // }
+  // geometry_msgs::msg::Point target_position = frontier->centroid;
+
+  // // time out if we are not making any progress
+  // bool same_goal = same_point(prev_goal_, target_position);
+
+  // prev_goal_ = target_position;
+  // if (!same_goal || prev_distance_ > frontier->min_distance) {
+  //   // we have different goal or we made some progress
+  //   last_progress_ = this->now();
+  //   prev_distance_ = frontier->min_distance;
+  // }
+  // // black list if we've made no progress for a long time
+  // if (goal_active_ &&
+  //     (this->now() - last_progress_ >
+  //      tf2::durationFromSec(progress_timeout_)) &&
+  //     !resuming_) {
+  //   frontier_blacklist_.push_back(target_position);
+  //   RCLCPP_DEBUG(logger_, "Adding current goal to black list");
+  //   makePlan();
+  //   return;
+  // }
+
+  // // ensure only first call of makePlan was set resuming to true
+  // if (resuming_) {
+  //   resuming_ = false;
+  // }
+
+  // // we don't need to do anything if we still pursuing the same goal
+  // if (same_goal && goal_active_) {
+  //   return;
+  // }
+
+  // ---------------------------------------------------------
+  // GOAL COMMITMENT
+  // If Husky already has a navigation goal, keep driving
+  // towards it instead of choosing a different frontier.
+  // ---------------------------------------------------------
+  if (goal_active_ && has_goal_) {
+
+    const double dist_to_goal =
+        std::hypot(
+            pose.position.x - current_goal_.x,
+            pose.position.y - current_goal_.y);
+
+    // Count progress only if Husky moved at least 10 cm closer.
+    if (dist_to_goal < prev_distance_ - 0.10) {
+      prev_distance_ = dist_to_goal;
+      last_progress_ = this->now();
+    }
+
+    // If Husky has made no progress for too long,
+    // give up this goal and allow a new one to be selected.
+    if ((this->now() - last_progress_ >
+         tf2::durationFromSec(progress_timeout_)) &&
+        !resuming_) {
+
+      RCLCPP_WARN(
+          logger_,
+          "No progress towards committed goal (%.2f, %.2f) for %.0f s. "
+          "Blacklisting and selecting a new goal.",
+          current_goal_.x,
+          current_goal_.y,
+          progress_timeout_);
+
+      frontier_blacklist_.push_back(current_goal_);
+      has_goal_ = false;
+
+      // Continue below and choose a new frontier.
+
+    } else {
+
+      RCLCPP_INFO(
+          logger_,
+          "Keeping committed goal (%.2f, %.2f), %.2f m remaining",
+          current_goal_.x,
+          current_goal_.y,
+          dist_to_goal);
+
+      resuming_ = false;
+      return;
+    }
+  }
+
+  resuming_ = false;
+
+  // ---------------------------------------------------------
+  // No active committed goal -> choose a new frontier.
+  // ---------------------------------------------------------
   auto frontier =
-      std::find_if_not(frontiers.begin(), frontiers.end(),
-                       [this](const frontier_exploration::Frontier& f) {
-                         return goalOnBlacklist(f.centroid);
-                       });
+      std::find_if_not(
+          frontiers.begin(),
+          frontiers.end(),
+          [this](const frontier_exploration::Frontier& f) {
+            return goalOnBlacklist(f.centroid);
+          });
+
   if (frontier == frontiers.end()) {
     RCLCPP_WARN(logger_, "All frontiers traversed/tried out, stopping.");
+
     auto status_msg = explore_lite_msgs::msg::ExploreStatus();
-    status_msg.status = explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
+    status_msg.status =
+        explore_lite_msgs::msg::ExploreStatus::EXPLORATION_COMPLETE;
     status_pub_->publish(status_msg);
+
     stop(true);
     return;
   }
+
   geometry_msgs::msg::Point target_position = frontier->centroid;
 
-  // time out if we are not making any progress
-  bool same_goal = same_point(prev_goal_, target_position);
+  // Commit to this goal.
+  current_goal_ = target_position;
+  has_goal_ = true;
 
-  prev_goal_ = target_position;
-  if (!same_goal || prev_distance_ > frontier->min_distance) {
-    // we have different goal or we made some progress
-    last_progress_ = this->now();
-    prev_distance_ = frontier->min_distance;
-  }
-  // black list if we've made no progress for a long time
-  if (goal_active_ &&
-      (this->now() - last_progress_ >
-       tf2::durationFromSec(progress_timeout_)) &&
-      !resuming_) {
-    frontier_blacklist_.push_back(target_position);
-    RCLCPP_DEBUG(logger_, "Adding current goal to black list");
-    makePlan();
-    return;
-  }
+  prev_distance_ =
+      std::hypot(
+          pose.position.x - current_goal_.x,
+          pose.position.y - current_goal_.y);
 
-  // ensure only first call of makePlan was set resuming to true
-  if (resuming_) {
-    resuming_ = false;
-  }
+  last_progress_ = this->now();
 
-  // we don't need to do anything if we still pursuing the same goal
-  if (same_goal && goal_active_) {
-    return;
-  }
+  RCLCPP_INFO(
+      logger_,
+      "New committed exploration goal (%.2f, %.2f), %.2f m away",
+      current_goal_.x,
+      current_goal_.y,
+      prev_distance_);
 
   RCLCPP_DEBUG(logger_, "Sending goal to move base nav2");
 
@@ -312,10 +409,16 @@ void Explore::makePlan()
 
   send_goal_options.goal_response_callback =
       [this](const NavigationGoalHandle::SharedPtr& goal_handle) {
+        // if (!goal_handle) {
+        //   RCLCPP_ERROR(logger_, "Goal was REJECTED by the action server");
+        //   goal_active_ = false;
+        // }
         if (!goal_handle) {
           RCLCPP_ERROR(logger_, "Goal was REJECTED by the action server");
           goal_active_ = false;
-        } else {
+          has_goal_ = false;
+        }
+         else {
           active_goal_id_ = goal_handle->get_goal_id();
           RCLCPP_DEBUG(logger_, "Goal ACCEPTED, uuid: %s",
             rclcpp_action::to_string(active_goal_id_).c_str());
@@ -381,6 +484,7 @@ void Explore::reachedGoal(const NavigationGoalHandle::WrappedResult& result,
   }
 
   goal_active_ = false;
+  has_goal_ = false;// Luke's update
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
       RCLCPP_DEBUG(logger_, "Goal was successful");
@@ -439,6 +543,7 @@ void Explore::stop(bool finished_exploring)
   RCLCPP_INFO(logger_, "Exploration stopped.");
 
   goal_active_ = false;
+  has_goal_ = false;// Luke's update
   // Only publish paused status if manually stopped (not finished exploring)
   if (!finished_exploring) {
     auto status_msg = explore_lite_msgs::msg::ExploreStatus();
