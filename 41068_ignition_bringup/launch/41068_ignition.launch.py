@@ -168,13 +168,23 @@ def add_robot(
                 'output_cmd_topic': 'cmd_vel_stg',
                 'scan_topic': 'scan',
                 'odom_topic': 'odom',
-                'stopping_distance': 1.10,
-                'front_sector_half_angle': 0.55,
-                'turn_enter_threshold': 0.10,
-                'turn_exit_threshold': 0.035,
-                'minimum_stop_time': 0.20,
+                'path_topic': 'plan',
+                'map_frame': frame_prefix + 'map',
+                'base_frame': frame_prefix + 'base_link',
+                # Path heading error [rad]: turn above ~20 deg, drive below ~5 deg.
+                'turn_enter_threshold': 0.35,
+                'turn_exit_threshold': 0.08,
+                'lookahead_distance': 0.8,
+                # Keep equal to max_vel_x in nav2_params_husky1.yaml.
+                'maximum_linear_speed': 1.0,
+                'stopping_distance': 0.9,
+                'corridor_half_width': 0.45,
+                'corridor_start': 0.35,
+                'minimum_stop_time': 0.10,
                 'allow_reverse': False,
             }],
+            # Reads the robot pose in the map frame for the path heading.
+            remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')],
             condition=robot_enabled,
         ))
 

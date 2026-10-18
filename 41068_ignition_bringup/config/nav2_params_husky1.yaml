@@ -124,7 +124,9 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: nav2_controller::SimpleGoalChecker
-      xy_goal_tolerance: 0.25 #1.0
+      # 0.5 m (backup branch: 1.0): husky_node observation poses are
+      # 2.2-3.0 m from the candidate and need to stay >= 1.5 m away.
+      xy_goal_tolerance: 0.5
       yaw_goal_tolerance: 3.14 #1.57
     # FollowPath:
     #   plugin: dwb_core::DWBLocalPlanner
@@ -180,18 +182,21 @@ controller_server:
       plugin: nav2_rotation_shim_controller::RotationShimController
       primary_controller: dwb_core::DWBLocalPlanner
 
-      # Start rotate-in-place if new path differs by > ~20 deg
-      angular_dist_threshold: 0.20
+      # Values from origin/backup/husky-navigation. stop_turn_go_controller
+      # (between Nav2 and Gazebo) also turns in place above ~20 deg of path
+      # heading error, so DWB's driving commands are executed straight.
+      # Start rotate-in-place if new path differs by > ~29 deg
+      angular_dist_threshold: 0.5
 
-      # Once rotating, continue until error is < ~3 deg
-      angular_disengage_threshold: 0.025
+      # Once rotating, continue until error is < ~6 deg
+      angular_disengage_threshold: 0.1
 
       # Look ahead on the new Nav2 path to determine desired heading
-      forward_sampling_distance: 0.5
+      forward_sampling_distance: 0.7
 
       # Rotation behaviour
-      rotate_to_heading_angular_vel: 0.55
-      max_angular_accel: 1.5
+      rotate_to_heading_angular_vel: 0.8
+      max_angular_accel: 3.2
       simulate_ahead_time: 1.0
 
       # We only need this for path alignment
@@ -206,15 +211,15 @@ controller_server:
 
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.25
+      max_vel_x: 1.0
       max_vel_y: 0.0
-      max_vel_theta: 2.8
+      max_vel_theta: 1.5
 
       min_speed_xy: 0.0
-      max_speed_xy: 0.25
+      max_speed_xy: 1.0
       min_speed_theta: 0.0
 
-      acc_lim_x: 0.8
+      acc_lim_x: 2.5
       acc_lim_y: 0.0
       acc_lim_theta: 3.2
 
@@ -231,7 +236,7 @@ controller_server:
       angular_granularity: 0.2
       transform_tolerance: 0.2
 
-      xy_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.5
       yaw_goal_tolerance: 0.35
       trans_stopped_velocity: 0.25
 
@@ -241,12 +246,14 @@ controller_server:
       critics:
       - RotateToGoal
       - Oscillation
-      - BaseObstacle
+      # BaseObstacle only checks the cell under the robot centre, so the
+      # corners of the rectangular Husky could scrape trees.
+      - ObstacleFootprint
       - GoalAlign
       - PathAlign
       - PathDist
       - GoalDist
-      BaseObstacle.scale: 0.02
+      ObstacleFootprint.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
       GoalAlign.scale: 32.0
@@ -255,7 +262,7 @@ controller_server:
       GoalDist.scale: 24.0
 
       RotateToGoal.scale: 32.0
-      RotateToGoal.xy_goal_tolerance: 0.25
+      RotateToGoal.xy_goal_tolerance: 0.5
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 local_costmap:
@@ -270,14 +277,14 @@ local_costmap:
       width: 10
       height: 10
       resolution: 0.05
-      footprint: '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'
+      footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm
       plugins:
       - obstacle_layer
       - inflation_layer
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 3.0
-        inflation_radius: 0.8 #2.0
+        inflation_radius: 2.0
       obstacle_layer:
         plugin: nav2_costmap_2d::ObstacleLayer
         enabled: true
@@ -304,7 +311,9 @@ global_costmap:
       global_frame: husky1_map
       robot_base_frame: husky1_base_link
       use_sim_time: true
-      footprint: '[ [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5] ]'
+      footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm
+      # global paths keep 5 cm more clearance from trees than the robot footprint
+      footprint_padding: 0.05
       resolution: 0.1
       track_unknown_space: true
       plugins:
@@ -331,7 +340,7 @@ global_costmap:
       inflation_layer:
         plugin: nav2_costmap_2d::InflationLayer
         cost_scaling_factor: 3.0
-        inflation_radius: 0.8 #2
+        inflation_radius: 2.0
       always_send_full_costmap: true
 map_server:
   ros__parameters:
@@ -437,17 +446,17 @@ velocity_smoother:
     feedback: OPEN_LOOP
 
     max_velocity:
-    - 0.35
+    - 1.0
     - 0.0
     - 1.5
 
     min_velocity:
-    - -0.35
+    - -1.0
     - 0.0
     - -1.5
 
     max_accel:
-    - 0.8
+    - 2.5
     - 0.0
     - 3.2
 
