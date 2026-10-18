@@ -673,11 +673,20 @@ void Explore::stop(bool finished_exploring)
     status_pub_->publish(status_msg);
   }
 
-  move_base_client_->async_cancel_all_goals();
   exploring_timer_->cancel();
 
   if (return_to_init_ && finished_exploring) {
-    returnToInitialPose();
+    // Send the return goal only once Nav2 has answered the cancel. Sending it
+    // straight after async_cancel_all_goals() let that cancel (which covers
+    // every goal) reach Nav2 after the new goal, so the return-home goal was
+    // cancelled the moment it started and the Husky stayed where it was.
+    move_base_client_->async_cancel_all_goals(
+        [this](rclcpp_action::Client<
+               nav2_msgs::action::NavigateToPose>::CancelResponse::SharedPtr) {
+          returnToInitialPose();
+        });
+  } else {
+    move_base_client_->async_cancel_all_goals();
   }
 }
 
