@@ -17,7 +17,6 @@ The condition of a run is its run_label without the trailing run number
 
 import csv
 import glob
-import json
 import os
 import re
 import statistics
@@ -255,8 +254,8 @@ def main():
     style(ax, 'Thermal coverage: hollow = before sweep, filled = end (R1)',
           'thermal coverage (%)')
     ax.axhline(95, color=MUTED, linestyle='--', linewidth=1)
-    ax.annotate('R1 target 95 %', (xs - 0.8, 95.3), fontsize=7, color=MUTED, ha='right',
-                va='bottom')
+    ax.annotate('R1 target 95 %', (0.01, 95.05), xycoords=('axes fraction', 'data'),
+                fontsize=7, color=MUTED, ha='left', va='bottom')
     positions = []
     x = 0
     for cond in conditions:

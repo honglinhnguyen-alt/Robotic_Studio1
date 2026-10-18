@@ -1,0 +1,13 @@
+stamp,run_label,world,completed,duration_s,wall_duration_s,exploration_status,candidates,exotic,native,unresolved,unresolved_low_confidence,duplicate,pending,lidar_coverage_pct,thermal_coverage_pct,truth_objects,matched,false_positives,precision,recall,mean_planar_error_m,max_planar_error_m,within_tolerance,classification_accuracy,boars,boars_detected,boars_classified,log_file
+20261019_011219,nominal_world_1,large_demo,True,1148.2,1176.5,returned_to_origin,14,4,6,3,1,1,0,99.5,96.8,14,13,0,1.0,0.929,0.25,0.472,13,0.923,5,5,4,logs/heat_sources_20261019_011219.log
+20261019_013252,nominal_seed11,large_demo,True,1103.7,1157.6,returned_to_origin,15,5,7,2,0,1,0,99.4,97.3,14,14,0,1.0,1.0,0.253,0.441,14,1.0,5,5,5,logs/heat_sources_20261019_013252.log
+20261019_015307,cover_seed21,large_demo,True,1098.2,1147.4,returned_to_origin,14,5,7,1,0,1,0,99.5,95.4,14,13,0,1.0,0.929,0.227,0.523,13,0.923,5,5,5,logs/heat_sources_20261019_015307.log
+20261019_021312,nominal_world_2,large_demo,True,1009.5,1055.8,returned_to_origin,14,6,7,1,0,0,0,99.4,95.5,14,14,0,1.0,1.0,0.222,0.431,14,0.929,5,5,5,logs/heat_sources_20261019_021312.log
+20261019_023145,nominal_seed12,large_demo,True,975.0,1017.1,returned_to_origin,13,4,7,1,0,1,0,99.5,95.7,14,12,0,1.0,0.857,0.341,0.641,12,0.833,5,5,4,logs/heat_sources_20261019_023145.log
+20261019_024939,cover_seed22,large_demo,True,1276.3,1338.1,returned_to_origin,14,5,7,2,0,0,0,99.6,96.7,14,14,0,1.0,1.0,0.352,0.727,14,1.0,5,5,5,logs/heat_sources_20261019_024939.log
+20261019_031255,nominal_world_3,large_demo,True,923.9,985.6,returned_to_origin,15,5,7,2,0,1,0,99.7,96.1,14,14,0,1.0,1.0,0.308,0.511,14,1.0,5,5,5,logs/heat_sources_20261019_031255.log
+20261019_033018,nominal_seed13,large_demo,True,1076.7,1137.1,returned_to_origin,15,5,7,2,1,1,0,99.4,95.4,14,14,0,1.0,1.0,0.255,0.792,14,1.0,5,5,5,logs/heat_sources_20261019_033018.log
+20261019_035012,cover_seed23,large_demo,True,953.2,987.1,returned_to_origin,13,5,7,1,1,0,0,99.5,95.6,14,13,0,1.0,0.929,0.364,0.8,13,1.0,5,5,5,logs/heat_sources_20261019_035012.log
+20261019_040737,nominal_world_4,large_demo,True,950.5,1006.0,returned_to_origin,16,5,9,1,1,1,0,99.4,95.8,14,14,1,0.933,1.0,0.255,0.607,14,0.857,5,5,5,logs/heat_sources_20261019_040737.log
+20261019_042520,nominal_seed14,large_demo,True,1068.1,1137.2,returned_to_origin,14,5,6,2,1,1,0,99.6,97.1,14,13,0,1.0,0.929,0.382,0.685,13,1.0,5,5,5,logs/heat_sources_20261019_042520.log
+20261019_044514,cover_seed24,large_demo,True,1340.1,1397.9,returned_to_origin,16,6,7,2,0,1,0,99.5,97.4,14,14,1,0.933,1.0,0.262,0.645,14,0.929,5,5,5,logs/heat_sources_20261019_044514.log

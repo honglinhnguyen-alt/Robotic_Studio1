@@ -1,0 +1,13 @@
+label,completed,returned_home,wall_s,sweep_looks,end_reason
+nominal_world_1,1,1,1224,6,returned
+nominal_seed11,1,1,1205,7,returned
+cover_seed21,1,1,1194,4,returned
+nominal_world_2,1,1,1104,4,returned
+nominal_seed12,1,1,1064,5,returned
+cover_seed22,1,1,1385,2,returned
+nominal_world_3,1,1,1034,1,returned
+nominal_seed13,1,1,1184,2,returned
+cover_seed23,1,1,1034,2,returned
+nominal_world_4,1,1,1054,0,returned
+nominal_seed14,1,1,1184,0,returned
+cover_seed24,1,1,1445,3,returned
