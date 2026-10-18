@@ -29,6 +29,8 @@ install(
     scripts/mission_node.py
     scripts/heat_source_logger.py
     scripts/coverage_tracker.py
+    scripts/random_animal_spawn.py
+    scripts/demo_events.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

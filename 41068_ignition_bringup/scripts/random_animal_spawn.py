@@ -1,317 +1,282 @@
 #!/usr/bin/env python3
 """
-Randomise animal positions in the Gazebo / Ignition world "large_demo".
+Randomise the animal layout of a running Gazebo world and write its ground truth.
 
-- Moves existing models; it does NOT spawn duplicate models.
-- Avoids known trees, rocks, tent, campfire, gazebo structure, etc.
-- Keeps animals separated from each other.
-- Randomises yaw as well as x / y.
-- Automatically supports both:
-    * Ignition Gazebo / Fortress: `ign service`, ignition.msgs.*
-    * New Gazebo Sim:            `gz service`,  gz.msgs.*
+Animals, campfires and obstacles are read from the world SDF, so the script
+follows the world file instead of a hard-coded list. Existing animal models are
+moved with the UserCommands set_pose service (nothing is spawned); campfires
+stay where they are.
 
-Test:
-    python3 random_animal_spawn.py
+Every animal is placed
+  - inside the survey radius around the Husky start (origin),
+  - at least --min-separation from every other heat source (animals and
+    campfires): mission_node treats records within 2.5 m as the same animal,
+  - at least --obstacle-clearance from every tree / rock / tent centre, and
+  - at least --min-start-distance from the Husky start.
 
-Reproducible layout:
-    python3 random_animal_spawn.py --seed 123
+Profiles
+  nominal  animals in the open (default obstacle clearance 3.0 m)
+  cover    each animal 1.0-2.0 m from a tree, so it is partly hidden from
+           some directions (harder for thermal + YOLO)
 
-Only show selected positions:
-    python3 random_animal_spawn.py --dry-run
+The ground truth for the evaluator (same JSON format as
+wildlife_spatial/config/static_large_demo_ground_truth.json, map frame = world
+frame because the Husky starts at the origin) is written to --ground-truth-out.
+
+Examples (simulation already running):
+    ros2 run 41068_ignition_bringup random_animal_spawn.py --seed 1
+    ros2 run 41068_ignition_bringup random_animal_spawn.py --seed 7 --profile cover
+    ros2 run 41068_ignition_bringup random_animal_spawn.py --seed 1 --dry-run
+Then start the mission with the printed ground_truth_file:=... argument.
 """
 
 import argparse
+import json
 import math
+import os
+from pathlib import Path
 import random
 import shutil
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ElementTree
+
+# Model URI name -> evaluated class; must match the evaluator.
+try:
+    from wildlife_spatial.spatial_evaluator import WORLD_MODEL_CLASSES
+except ImportError:  # wildlife_spatial not built: same table
+    WORLD_MODEL_CLASSES = {
+        'boar': 'boar', 'male_deer': 'deer', 'female_deer': 'deer',
+        'kangaroo': 'kangaroo', 'campfire': 'campfire',
+    }
+
+ANIMAL_MODELS = {m for m, c in WORLD_MODEL_CLASSES.items() if c != 'campfire'}
+GROUND_MODELS = {'forest_plane', 'grass_plane'}
+MAX_ATTEMPTS = 20000
 
 
-WORLD_NAME = "large_demo"
+# --------------------------------------------------------------------------
+# World parsing and layout (pure, tested offline)
+# --------------------------------------------------------------------------
 
-# Stay away from the walls, which are close to +/-12.5 m in large_demo.sdf.
-X_MIN, X_MAX = -10.0, 10.0
-Y_MIN, Y_MAX = -10.0, 10.0
+def load_world(path):
+    """Return (world name, includes) of an SDF world.
 
-# Minimum centre-to-centre separation between animals.
-MIN_ANIMAL_DISTANCE = 2.5
-
-# Extra padding added around every obstacle exclusion radius.
-EXTRA_OBSTACLE_MARGIN = 0.35
-
-# Maximum attempts to find a valid position for one animal.
-MAX_ATTEMPTS = 5000
-
-# Existing animal model names in large_demo.sdf.
-# z can be adjusted here if any mesh sits too high / low.
-ANIMALS = {
-    "female_deer1": 0.0,
-    "male_deer1": 0.0,
-    "kangaroo1": 0.0,
-    "boar1": 0.0,
-}
-
-# Known obstacle centres from large_demo.sdf.
-# Format: (name, x, y, exclusion_radius_metres)
-#
-# These radii are deliberately conservative because many of the external
-# Fuel models do not expose their full geometry directly in the world SDF.
-OBSTACLES = [
-    # Oak trees
-    ("oak1",  -4.77393,  12.2995, 1.35),
-    ("oak2",   2.99444,  -4.95498, 1.35),
-    ("oak3",  -9.12426, -11.2689, 1.35),
-    ("oak4",   4.21788,  -1.41417, 1.35),
-    ("oak5",  -6.26553,   5.00575, 1.35),
-    ("oak6",  -4.33701,   1.32854, 1.35),
-    ("oak7",  -0.620372, 10.0, 1.35),
-    ("oak8",   3.54698,   5.0, 1.35),
-
-    # Pine trees
-    ("pine1",   6.05721,   9.78933, 1.25),
-    ("pine2", -10.0184,    8.85188, 1.25),
-    ("pine3",  -4.62343, -12.5618, 1.25),
-    ("pine4",   7.08738,   1.33612, 1.25),
-    ("pine5",  -4.64898,  -3.0329, 1.25),
-    ("pine6",  -2.27195,  -8.68441, 1.25),
-
-    # Other existing objects
-    ("platypus1", -8.0,  6.0, 1.0),
-    ("gazebo1",   10.0, -10.0, 3.0),
-
-    # Rocks
-    ("rock1",  -6.30926, -8.38159, 1.25),
-    ("rock2",  -8.27162, -6.19647, 1.25),
-    ("rock3",  -9.2841,  -4.61803, 1.25),
-    ("rock4", -10.0,    -12.0,     1.25),
-    ("rock5", -12.0,    -12.0,     1.25),
-    ("rock6", -14.0,    -12.0,     1.25),
-
-    # Scenario props
-    ("tent1",     -9.0, -6.0, 2.0),
-    ("campfire1", -7.0, -6.0, 1.4),
-
-    # Dynamic-demo objects that are initially visible in this world
-    ("demo_animal",       -4.0,  4.0, 1.0),
-    ("demo_tree_healthy",  4.0, -4.0, 1.25),
-
-    # Optional reserved spawn point for Husky.
-    # If your Husky starts somewhere else, edit or remove this line.
-    ("husky_start_reserved", 0.0, 0.0, 2.0),
-]
+    Each include is a dict with name, model (URI name), x, y, z, yaw.
+    """
+    world = ElementTree.parse(Path(path).expanduser()).getroot().find('world')
+    if world is None:
+        raise ValueError(f'{path} contains no <world> element')
+    includes = []
+    for include in world.findall('include'):
+        uri = (include.findtext('uri') or '').strip()
+        model = uri.split('://', 1)[-1].strip('/').split('/')[0]
+        pose = [float(v) for v in (include.findtext('pose') or '0 0 0').split()]
+        pose += [0.0] * (6 - len(pose))
+        includes.append({
+            'name': (include.findtext('name') or model).strip(),
+            'model': model,
+            'x': pose[0], 'y': pose[1], 'z': pose[2], 'yaw': pose[5],
+        })
+    return world.get('name', ''), includes
 
 
-def distance_2d(x1, y1, x2, y2):
-    return math.hypot(x1 - x2, y1 - y2)
+def split_world(includes):
+    """Split includes into (animals, campfires, obstacles)."""
+    animals = [i for i in includes if i['model'] in ANIMAL_MODELS]
+    campfires = [i for i in includes
+                 if WORLD_MODEL_CLASSES.get(i['model']) == 'campfire']
+    obstacles = [i for i in includes
+                 if i['model'] not in WORLD_MODEL_CLASSES
+                 and i['model'] not in GROUND_MODELS]
+    return animals, campfires, obstacles
 
 
-def clear_of_obstacles(x, y):
-    """Return (True, None) if point is outside all obstacle exclusion zones."""
-    for name, ox, oy, radius in OBSTACLES:
-        required = radius + EXTRA_OBSTACLE_MARGIN
-        if distance_2d(x, y, ox, oy) < required:
-            return False, name
-    return True, None
+def _min_distance(x, y, points):
+    return min((math.hypot(x - p['x'], y - p['y']) for p in points),
+               default=math.inf)
 
 
-def clear_of_animals(x, y, chosen_positions):
-    """Avoid overlap / unrealistic clustering between randomly placed animals."""
-    for other_name, (ox, oy, _yaw) in chosen_positions.items():
-        if distance_2d(x, y, ox, oy) < MIN_ANIMAL_DISTANCE:
-            return False, other_name
-    return True, None
-
-
-def choose_positions(rng):
-    """Choose a collision-avoiding random x, y and yaw for every animal."""
-    chosen = {}
-
-    for animal_name in ANIMALS:
+def choose_layout(rng, animals, campfires, obstacles, radius=22.0,
+                  min_separation=6.0, obstacle_clearance=3.0,
+                  min_start_distance=5.0, profile='nominal'):
+    """Return {animal name: (x, y, yaw)} satisfying the placement rules."""
+    trees = [o for o in obstacles if 'tree' in o['model']]
+    placed = [dict(c) for c in campfires]
+    layout = {}
+    for animal in animals:
         for _ in range(MAX_ATTEMPTS):
-            x = rng.uniform(X_MIN, X_MAX)
-            y = rng.uniform(Y_MIN, Y_MAX)
+            r = radius * math.sqrt(rng.random())
+            a = rng.uniform(-math.pi, math.pi)
+            # Round before checking so the stored position obeys the rules.
+            x, y = round(r * math.cos(a), 2), round(r * math.sin(a), 2)
+            if math.hypot(x, y) < min_start_distance:
+                continue
+            if _min_distance(x, y, placed) < min_separation:
+                continue
+            if profile == 'cover':
+                if _min_distance(x, y, obstacles) < 1.0:
+                    continue
+                if not 1.0 <= _min_distance(x, y, trees) <= 2.0:
+                    continue
+            elif _min_distance(x, y, obstacles) < obstacle_clearance:
+                continue
             yaw = rng.uniform(-math.pi, math.pi)
-
-            obstacle_ok, _ = clear_of_obstacles(x, y)
-            animals_ok, _ = clear_of_animals(x, y, chosen)
-
-            if obstacle_ok and animals_ok:
-                chosen[animal_name] = (x, y, yaw)
-                break
+            layout[animal['name']] = (x, y, round(yaw, 3))
+            placed.append({'x': x, 'y': y})
+            break
         else:
             raise RuntimeError(
-                f"Could not find a valid position for {animal_name} after "
-                f"{MAX_ATTEMPTS} attempts. Reduce safety distances or enlarge "
-                f"the spawn region."
-            )
+                f'No valid position for {animal["name"]} after {MAX_ATTEMPTS} '
+                'attempts: relax --min-separation / --obstacle-clearance or '
+                'increase --radius.')
+    return layout
 
-    return chosen
 
+def ground_truth_payload(animals, campfires, layout, frame_id='husky1_map',
+                         source=''):
+    """Ground truth JSON (evaluator format) for the moved animals + campfires."""
+    objects = []
+    for animal in animals:
+        x, y, _ = layout.get(animal['name'], (animal['x'], animal['y'], 0.0))
+        objects.append({
+            'id': animal['name'],
+            'class_name': WORLD_MODEL_CLASSES[animal['model']],
+            'position': {'x': x, 'y': y, 'z': animal['z']},
+        })
+    for fire in campfires:
+        objects.append({
+            'id': fire['name'],
+            'class_name': 'campfire',
+            'position': {'x': fire['x'], 'y': fire['y'], 'z': fire['z']},
+        })
+    return {'frame_id': frame_id, 'source': source, 'objects': objects}
+
+
+# --------------------------------------------------------------------------
+# Gazebo
+# --------------------------------------------------------------------------
 
 def detect_gazebo_cli():
-    if shutil.which("ign"):
-        return "ign", "ignition.msgs"
-
-    if shutil.which("gz"):
-        return "gz", "gz.msgs"
-
-    raise RuntimeError(
-        "Neither `ign` nor `gz` was found in PATH."
-    )
+    if shutil.which('ign'):
+        return 'ign', 'ignition.msgs'
+    if shutil.which('gz'):
+        return 'gz', 'gz.msgs'
+    raise RuntimeError('Neither `ign` nor `gz` was found in PATH.')
 
 
-def wait_for_set_pose_service(cli, timeout_seconds=20.0):
-    """Wait until Gazebo has created /world/large_demo/set_pose."""
-    target = f"/world/{WORLD_NAME}/set_pose"
+def wait_for_service(cli, service, timeout_seconds=20.0):
     deadline = time.time() + timeout_seconds
-
     while time.time() < deadline:
         try:
-            result = subprocess.run(
-                [cli, "service", "--list"],
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-            if target in result.stdout:
+            result = subprocess.run([cli, 'service', '--list'],
+                                    capture_output=True, text=True, timeout=3)
+            if service in result.stdout:
                 return True
         except (subprocess.SubprocessError, OSError):
             pass
-
         time.sleep(0.5)
-
     return False
 
 
-def set_pose(cli, msg_ns, model_name, x, y, z, yaw):
-    """Move one existing Gazebo model using the UserCommands set_pose service."""
-    service = f"/world/{WORLD_NAME}/set_pose"
-
-    qz = math.sin(yaw / 2.0)
-    qw = math.cos(yaw / 2.0)
-
+def set_pose(cli, msg_ns, world, model_name, x, y, z, yaw):
+    """Move one existing model with the UserCommands set_pose service."""
     request = (
         f'name: "{model_name}", '
         f'position: {{x: {x:.6f}, y: {y:.6f}, z: {z:.6f}}}, '
-        f'orientation: {{x: 0.0, y: 0.0, z: {qz:.9f}, w: {qw:.9f}}}'
+        f'orientation: {{x: 0.0, y: 0.0, z: {math.sin(yaw / 2):.9f}, '
+        f'w: {math.cos(yaw / 2):.9f}}}'
     )
-
-    cmd = [
-        cli,
-        "service",
-        "-s", service,
-        "--reqtype", f"{msg_ns}.Pose",
-        "--reptype", f"{msg_ns}.Boolean",
-        "--timeout", "3000",
-        "--req", request,
-    ]
-
+    cmd = [cli, 'service', '-s', f'/world/{world}/set_pose',
+           '--reqtype', f'{msg_ns}.Pose', '--reptype', f'{msg_ns}.Boolean',
+           '--timeout', '3000', '--req', request]
     result = subprocess.run(cmd, capture_output=True, text=True)
-
-    combined = (result.stdout + "\n" + result.stderr).strip()
-
-    # Different Gazebo / Ignition versions format their output slightly
-    # differently, so return code is the main check.
     if result.returncode != 0:
-        raise RuntimeError(
-            f"Failed to move {model_name}.\n"
-            f"Command: {' '.join(cmd)}\n"
-            f"Output:\n{combined}"
-        )
-
-    return combined
+        raise RuntimeError(f'Failed to move {model_name}: '
+                           f'{(result.stdout + result.stderr).strip()}')
 
 
-def print_positions(positions):
-    print("\nSelected random animal positions:")
-    print("-" * 67)
-    print(f"{'animal':18s} {'x (m)':>10s} {'y (m)':>10s} {'yaw (deg)':>12s}")
-    print("-" * 67)
-
-    for name, (x, y, yaw) in positions.items():
-        print(
-            f"{name:18s} "
-            f"{x:10.3f} "
-            f"{y:10.3f} "
-            f"{math.degrees(yaw):12.1f}"
-        )
-
-    print("-" * 67)
+def default_world_path():
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        return Path(get_package_share_directory('41068_ignition_bringup')) \
+            / 'worlds' / 'large_demo.sdf'
+    except Exception:  # not installed: source tree
+        return Path(__file__).resolve().parents[1] / 'worlds' / 'large_demo.sdf'
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=None,
-        help="Use a fixed seed when you want the same layout again.",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Choose and print positions but do not move Gazebo models.",
-    )
+    parser = argparse.ArgumentParser(description=__doc__.split('\n')[1])
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Fixed seed: the same layout every time.')
+    parser.add_argument('--profile', choices=('nominal', 'cover'), default='nominal')
+    parser.add_argument('--world', default=None,
+                        help='World SDF (default: installed large_demo.sdf).')
+    parser.add_argument('--radius', type=float, default=22.0,
+                        help='Max distance of an animal from the start [m].')
+    parser.add_argument('--min-separation', type=float, default=6.0)
+    parser.add_argument('--obstacle-clearance', type=float, default=3.0)
+    parser.add_argument('--min-start-distance', type=float, default=5.0)
+    parser.add_argument('--ground-truth-out', default=None,
+                        help='Default: ~/wildtrack_runs/ground_truth_<world>_'
+                             '<profile>_seed<seed>.json')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Print the layout and write the ground truth, '
+                             'but do not move Gazebo models.')
     args = parser.parse_args()
 
-    rng = random.Random(args.seed)
-    positions = choose_positions(rng)
-    print_positions(positions)
+    world_path = Path(args.world).expanduser() if args.world else default_world_path()
+    world_name, includes = load_world(world_path)
+    animals, campfires, obstacles = split_world(includes)
+    seed = args.seed if args.seed is not None else random.randrange(1_000_000)
+    layout = choose_layout(
+        random.Random(seed), animals, campfires, obstacles, args.radius,
+        args.min_separation, args.obstacle_clearance, args.min_start_distance,
+        args.profile)
+
+    print(f'World {world_name} ({world_path}), profile {args.profile}, seed {seed}')
+    print(f'{"animal":16s} {"x (m)":>8s} {"y (m)":>8s} {"yaw (deg)":>10s}')
+    for name, (x, y, yaw) in layout.items():
+        print(f'{name:16s} {x:8.2f} {y:8.2f} {math.degrees(yaw):10.1f}')
+
+    out = Path(args.ground_truth_out).expanduser() if args.ground_truth_out else (
+        Path(os.path.expanduser('~/wildtrack_runs'))
+        / f'ground_truth_{world_name}_{args.profile}_seed{seed}.json')
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload = ground_truth_payload(
+        animals, campfires, layout,
+        source=f'random_animal_spawn.py --seed {seed} --profile {args.profile} '
+               f'({world_path.name})')
+    out.write_text(json.dumps(payload, indent=2) + '\n')
+    print(f'\nGround truth: {out}')
 
     if args.dry_run:
-        print("\nDry run only: Gazebo was not changed.")
+        print('Dry run: Gazebo was not changed.')
         return 0
 
     try:
         cli, msg_ns = detect_gazebo_cli()
     except RuntimeError as exc:
-        print(f"\nERROR: {exc}", file=sys.stderr)
+        print(f'ERROR: {exc}', file=sys.stderr)
         return 1
-
-    print(f"\nUsing Gazebo command: {cli}")
-    print(f"Message namespace: {msg_ns}")
-    print(f"Waiting for /world/{WORLD_NAME}/set_pose ...")
-
-    if not wait_for_set_pose_service(cli):
-        print(
-            "\nERROR: set_pose service was not found.\n"
-            f"Check with:\n    {cli} service --list | grep "
-            f"/world/{WORLD_NAME}/set_pose\n\n"
-            "If it is missing, the UserCommands system plugin may need to be "
-            "added to the world.",
-            file=sys.stderr,
-        )
+    service = f'/world/{world_name}/set_pose'
+    if not wait_for_service(cli, service):
+        print(f'ERROR: {service} not found. Is the simulation running?',
+              file=sys.stderr)
         return 1
-
-    print("Service found. Moving animals...")
-
-    for animal_name, (x, y, yaw) in positions.items():
-        z = ANIMALS[animal_name]
-
+    for animal in animals:
+        x, y, yaw = layout[animal['name']]
         try:
-            set_pose(
-                cli=cli,
-                msg_ns=msg_ns,
-                model_name=animal_name,
-                x=x,
-                y=y,
-                z=z,
-                yaw=yaw,
-            )
+            set_pose(cli, msg_ns, world_name, animal['name'], x, y, animal['z'], yaw)
         except RuntimeError as exc:
-            print(f"\nERROR: {exc}", file=sys.stderr)
+            print(f'ERROR: {exc}', file=sys.stderr)
             return 1
-
-        print(
-            f"  OK  {animal_name:18s} -> "
-            f"x={x:6.2f}, y={y:6.2f}, yaw={math.degrees(yaw):6.1f} deg"
-        )
-
-    print("\nDone. All animals were randomised.")
+    print(f'Moved {len(animals)} animals. Start the mission with:\n'
+          f'  ros2 launch 41068_ignition_bringup 41068_mission.launch.py '
+          f'ground_truth_file:={out} run_label:={args.profile}_seed{seed}')
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())
