@@ -35,6 +35,8 @@ from vision_msgs.msg import Detection3D
 from vision_msgs.msg import Detection3DArray
 from vision_msgs.msg import ObjectHypothesisWithPose
 
+from wildlife_spatial.thermal_contrast import hot_mask
+
 
 NANOSECONDS_PER_SECOND = 1_000_000_000
 
@@ -656,6 +658,9 @@ class CandidateLocalizer(Node):
         # thermal_mask: use only depth points that land on hot thermal
         # pixels. bbox: previous behaviour (median of the inner box).
         self.declare_parameter('depth_selection', 'thermal_mask')
+        # Same hot-pixel rule as the thermal detector (thermal_contrast.py).
+        self.declare_parameter('hot_threshold_mode', 'relative')
+        self.declare_parameter('hot_delta_k', 10.0)
         self.declare_parameter('hot_threshold_k', 315.0)
         self.declare_parameter('kelvin_per_count', 0.01)
         self.declare_parameter('erode_hot_mask', True)
@@ -705,6 +710,8 @@ class CandidateLocalizer(Node):
         self._hot_threshold_k = float(
             self.get_parameter('hot_threshold_k').value
         )
+        self._hot_mode = str(self.get_parameter('hot_threshold_mode').value)
+        self._hot_delta_k = float(self.get_parameter('hot_delta_k').value)
         self._kelvin_per_count = float(
             self.get_parameter('kelvin_per_count').value
         )
@@ -894,7 +901,10 @@ class CandidateLocalizer(Node):
         if self._depth_selection == 'thermal_mask':
             self.get_logger().info(
                 'Depth selection: thermal_mask (only depth points on pixels '
-                f'>= {self._hot_threshold_k:.1f} K from {thermal_image_topic}'
+                + (f'>= {self._hot_delta_k:.1f} K above the frame median'
+                   if self._hot_mode == 'relative'
+                   else f'>= {self._hot_threshold_k:.1f} K')
+                + f' from {thermal_image_topic}'
                 f'), pixel stride={self._pixel_stride}, '
                 f'range cluster={self._depth_cluster_window:.2f} m, '
                 f'range=[{self._minimum_range:.1f}, '
@@ -951,7 +961,8 @@ class CandidateLocalizer(Node):
                 f'max={float(np.nanmax(kelvin)):.2f} K'
             )
         stamp_ns = stamp_nanoseconds(message.header.stamp)
-        self._hot_masks.append((stamp_ns, kelvin >= self._hot_threshold_k))
+        self._hot_masks.append((stamp_ns, hot_mask(
+            kelvin, self._hot_mode, self._hot_threshold_k, self._hot_delta_k)))
         self._prune(self._hot_masks, stamp_ns, lambda item: item[0])
 
     def _hot_mask_for(self, stamp):

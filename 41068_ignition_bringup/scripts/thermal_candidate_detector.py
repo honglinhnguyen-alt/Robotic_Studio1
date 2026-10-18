@@ -35,6 +35,7 @@ from std_msgs.msg import Bool
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
 
 from perception_common import HotRegionTracker, short_tag
+from wildlife_spatial.thermal_contrast import hot_mask, local_background_k
 from perception_overlay import (
     CONFIRMED_HEAT_COLOUR,
     TENTATIVE_HEAT_COLOUR,
@@ -71,6 +72,11 @@ class ThermalCandidateDetector(Node):
         self.declare_parameter('kelvin_per_count', 0.01)
         self.declare_parameter('display_min_k', 285.0)
         self.declare_parameter('display_max_k', 335.0)
+        # R5: 'relative' = hot_delta_k above the scene background and above
+        # the region's local background; 'absolute' = old fixed hot_threshold_k.
+        self.declare_parameter('hot_threshold_mode', 'relative')
+        self.declare_parameter('hot_delta_k', 10.0)
+        self.declare_parameter('local_background_margin', 0.3)  # x box size
         self.declare_parameter('hot_threshold_k', 315.0)
         self.declare_parameter('min_hot_area_px', 30)
         self.declare_parameter('morphology_kernel_px', 3)
@@ -131,13 +137,16 @@ class ThermalCandidateDetector(Node):
             10,
         )
 
-        threshold = float(self.get_parameter('hot_threshold_k').value)
+        mode = str(self.get_parameter('hot_threshold_mode').value)
+        rule = (f'>= {float(self.get_parameter("hot_delta_k").value):.1f} K above '
+                'scene and local background' if mode == 'relative' else
+                f'>= {float(self.get_parameter("hot_threshold_k").value):.2f} K')
         minimum_area = int(self.get_parameter('min_hot_area_px').value)
         persistence = int(self.get_parameter('persistence_frames').value)
         self.get_logger().info(
             'Thermal candidate detector ready | '
             f'input={self.resolve_topic_name(image_topic)} | '
-            f'hot_threshold={threshold:.2f} K | '
+            f'hot: {rule} | '
             f'min_area={minimum_area} px | '
             f'persistence={persistence} frames'
         )
@@ -228,8 +237,11 @@ class ThermalCandidateDetector(Node):
             self.last_log_ns = now_ns
 
     def _find_hot_regions(self, temperature: np.ndarray) -> List[Dict[str, float]]:
+        mode = str(self.get_parameter('hot_threshold_mode').value)
+        delta = float(self.get_parameter('hot_delta_k').value)
         threshold = float(self.get_parameter('hot_threshold_k').value)
-        mask = (temperature >= threshold).astype(np.uint8) * 255
+        hot = hot_mask(temperature, mode, threshold, delta)
+        mask = hot.astype(np.uint8) * 255
 
         kernel_size = max(
             1,
@@ -260,7 +272,25 @@ class ThermalCandidateDetector(Node):
                 continue
 
             component_values = temperature[labels == label]
+            if mode == 'relative':
+                # Must also stand out from its own surroundings (R5: "above
+                # the local background"), not only from the frame median.
+                margin = max(4, int(float(
+                    self.get_parameter('local_background_margin').value) * max(width, height)))
+                background = local_background_k(
+                    temperature, hot, (x, y, width, height), margin)
+                if not np.isfinite(background):
+                    background = float(np.median(temperature[~hot])) if (~hot).any() \
+                        else float(np.median(temperature))
+                contrast = float(np.percentile(component_values, 90)) - background
+                if contrast < delta:
+                    continue
+            else:
+                background = threshold
+                contrast = float(component_values.max()) - threshold
             regions.append({
+                'background_temperature': background,
+                'contrast': contrast,
                 'x': float(x),
                 'y': float(y),
                 'width': float(width),
@@ -297,9 +327,9 @@ class ThermalCandidateDetector(Node):
     ) -> None:
         output = Detection2DArray()
         output.header = source_msg.header
-        threshold = float(self.get_parameter('hot_threshold_k').value)
-        display_max = float(self.get_parameter('display_max_k').value)
-        score_denominator = max(1e-6, display_max - threshold)
+        # Score: contrast to the local background over the display range.
+        score_denominator = max(1e-6, float(self.get_parameter('display_max_k').value)
+                                - float(self.get_parameter('display_min_k').value))
 
         for track in tracks:
             region = track['data']
@@ -316,10 +346,7 @@ class ThermalCandidateDetector(Node):
             )
             hypothesis = ObjectHypothesisWithPose()
             confidence = np.clip(
-                (float(region['max_temperature']) - threshold) / score_denominator,
-                0.0,
-                1.0,
-            )
+                float(region.get('contrast', 0.0)) / score_denominator, 0.0, 1.0)
             self._set_hypothesis(hypothesis, 'heat_source', float(confidence))
             detection.results.append(hypothesis)
             output.detections.append(detection)
@@ -347,14 +374,16 @@ class ThermalCandidateDetector(Node):
         for track in tracks:
             tag = short_tag(str(track['id']))
             temperature_k = float(track['data'].get('max_temperature', 0.0))
+            contrast_k = float(track['data'].get('contrast', 0.0))
+            reading = f'{temperature_k:.0f} K (+{contrast_k:.0f})'
             if track['confirmed']:
                 state = 'confirmed' if track['observed'] else 'coasting'
                 legend_lines.append(
-                    (f'{tag} {temperature_k:.0f} K {state}', CONFIRMED_HEAT_COLOUR)
+                    (f'{tag} {reading} {state}', CONFIRMED_HEAT_COLOUR)
                 )
             else:
                 legend_lines.append((
-                    f'{tag} {temperature_k:.0f} K {track["streak"]}/{persistence}',
+                    f'{tag} {reading} {track["streak"]}/{persistence}',
                     TENTATIVE_HEAT_COLOUR,
                 ))
         legend_rect = draw_legend(
