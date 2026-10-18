@@ -24,8 +24,8 @@
       "id": "kangaroo_01",
       "class_name": "kangaroo",
       "position": {
-        "x": -13.5,
-        "y": 7.4,
+        "x": -10.6,
+        "y": 11.5,
         "z": 0.0
       }
     },
@@ -42,8 +42,8 @@
       "id": "boar_03",
       "class_name": "boar",
       "position": {
-        "x": 2.4,
-        "y": -12.6,
+        "x": 7.2,
+        "y": -13.9,
         "z": 0.0
       }
     },
@@ -60,8 +60,8 @@
       "id": "male_deer_01",
       "class_name": "deer",
       "position": {
-        "x": 18.5,
-        "y": -2.5,
+        "x": 16.0,
+        "y": -11.7,
         "z": 0.0
       }
     },

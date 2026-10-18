@@ -194,13 +194,17 @@ ros2 topic echo /husky1/perception/thermal_yolo/result --field data
 | `confirm_confidence` | 0.70 | R6 threshold. |
 | `standoff_distances` | [3.0, 2.2, 2.6] | Poses too close to trees → larger. YOLO too_far → smaller. |
 | `bearing_tolerance_deg` | 15 | Results rejected as `not_in_view` although the animal is centred → larger. |
-| `duplicate_radius` | 1.5 | Two real animals closer than this → the second becomes DUPLICATE. 0 disables. |
+| `duplicate_radius` | 2.5 | A new record this close to an investigated one is the same animal seen from another side (DUPLICATE, not visited). large_demo keeps heat sources >= 6 m apart; lower it, or set `duplicate_requires_shared_track: true`, for worlds with animals closer together. 0 disables. |
 | `pause_settle_sec` | 1.5 | Husky goal cancelled right after the pause → larger. |
 | `look_from_current_within` | 4.0 | Attempt 1 only turns and looks when already this close. 0 = always drive. |
 | `boundary_radius` (coverage_tracker) | 30.0 | Survey area for R1 coverage; change with the world. |
 | `thermal_range_m` (coverage_tracker) | 10.0 | Distance at which the thermal camera counts an area as checked. |
 
 ## Notes and limitations
+
+- Return home: with `return_to_init: true` (explore_lite params) the Husky
+  drives back to its start pose when no frontier is left. A heat source seen
+  on the way is still investigated; the return restarts afterwards.
 
 - The flow drives to the candidate first. C1 3.3 lists "YOLO from the current
   pose" as attempt 1; that only happens here when the robot is already within

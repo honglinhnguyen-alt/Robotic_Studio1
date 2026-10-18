@@ -291,7 +291,7 @@
     <include>
       <uri>model://kangaroo</uri>
       <name>kangaroo_01</name>
-      <pose>-13.5 7.4 0 0 0 1.4</pose>
+      <pose>-10.6 11.5 0 0 0 1.4</pose>
     </include>
     <!-- boar_02: pair B (boar-boar ~1.5 m) -->
     <include>
@@ -303,7 +303,7 @@
     <include>
       <uri>model://boar</uri>
       <name>boar_03</name>
-      <pose>2.4 -12.6 0 0 0 -0.9</pose>
+      <pose>7.2 -13.9 0 0 0 -0.9</pose>
     </include>
     <!-- boar_04: pair C (boar-deer ~1.6 m) -->
     <include>
@@ -315,7 +315,7 @@
     <include>
       <uri>model://male_deer</uri>
       <name>male_deer_01</name>
-      <pose>18.5 -2.5 0 0 0 -2</pose>
+      <pose>16.0 -11.7 0 0 0 -2</pose>
     </include>
     <include>
       <uri>model://boar</uri>

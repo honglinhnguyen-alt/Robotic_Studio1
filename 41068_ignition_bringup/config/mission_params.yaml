@@ -22,12 +22,17 @@
     # Heat clearly seen but no animal box in this many attempts -> REJECTED
     reject_after_no_animal_views: 2
     # A new registry record this close to an investigated candidate is
-    # treated as the same animal (DUPLICATE). Must be > registry merge
-    # distance (1.0 m) to have any effect. 0 disables.
-    duplicate_radius: 1.5
-    # ...and only when both records came from the same thermal track, so a
-    # different animal standing next to it is still investigated later.
-    duplicate_requires_shared_track: true
+    # treated as the same animal (DUPLICATE) and is not visited again.
+    # Seen from another side the same animal was localized up to ~1.1 m
+    # from its first record (new thermal track, so the registry's 1.0 m merge
+    # and a shared-track rule both missed it and it was counted twice).
+    # large_demo keeps every pair of heat sources >= 6 m apart, so 2.5 m
+    # cannot merge two different animals. Must be > registry merge distance
+    # (1.0 m) to have any effect. 0 disables.
+    duplicate_radius: 2.5
+    # true: only merge when both records came from the same thermal track
+    # (for worlds where different animals stand closer than duplicate_radius).
+    duplicate_requires_shared_track: false
     # explore_lite cancels every Nav2 goal when paused; wait before the Husky
     # node sends its goal so that cancel cannot hit it.
     pause_settle_sec: 1.5

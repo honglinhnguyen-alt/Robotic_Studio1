@@ -519,7 +519,7 @@ class MissionNode(Node):
                     candidate['last_outcome'] = f'duplicate_of:{duplicate_of}'
                     self.get_logger().info(
                         f'{candidate_id} is within {self.duplicate_radius:.1f} m of '
-                        f'{duplicate_of} (same thermal track); marked DUPLICATE.')
+                        f'{duplicate_of}; marked DUPLICATE.')
                     self._event('result', candidate_id,
                                 f'RESULT {candidate_id} at ({x:.2f}, {y:.2f}): same object '
                                 f'as {duplicate_of} (skipped)', state='duplicate', trials=0,
