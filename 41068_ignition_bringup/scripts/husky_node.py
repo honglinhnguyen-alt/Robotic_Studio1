@@ -182,6 +182,9 @@ class HuskyNode(Node):
         # safety_radius + goal_tolerance away so Nav2's goal tolerance cannot
         # bring it inside.
         self.declare_parameter('safety_radius', 2.0)
+        # 'look' command (thermal coverage sweep): stand this far from the
+        # unchecked area, face it, settle, report 'looked' (no YOLO).
+        self.declare_parameter('look_standoff', 4.0)
         self.declare_parameter('goal_tolerance', 0.5)       # Nav2 xy_goal_tolerance
         self.declare_parameter('face_tolerance_deg', 10.0)
         self.declare_parameter('spin_time_allowance_sec', 15.0)
@@ -237,7 +240,7 @@ class HuskyNode(Node):
             if job is not None:
                 self._report('cancelled', job=job)
             return
-        if command != 'investigate':
+        if command not in ('investigate', 'look'):
             return
         try:
             candidate_id = str(data['candidate_id'])
@@ -253,16 +256,16 @@ class HuskyNode(Node):
             return  # duplicate command
         if self.job is not None:
             self._stop_job('replaced by a new command')
-        self._start_job(candidate_id, attempt, cx, cy, avoid)
+        self._start_job(candidate_id, attempt, cx, cy, avoid, mode=command)
 
-    def _start_job(self, candidate_id, attempt, cx, cy, avoid=()):
+    def _start_job(self, candidate_id, attempt, cx, cy, avoid=(), mode='investigate'):
         self.job_token += 1
         self.job = {
             'candidate_id': candidate_id, 'attempt': attempt,
             'x': cx, 'y': cy, 'token': self.job_token,
             'phase': 'planning', 'viewpoints': [], 'next_index': 0,
             'nav_started': None, 'verify_tries': 0, 'viewpoint': None,
-            'goal_seq': 0,
+            'goal_seq': 0, 'mode': mode,
         }
         self.get_logger().info(
             f'Investigate {candidate_id} (attempt {attempt}) at ({cx:.2f}, {cy:.2f})')
@@ -271,7 +274,7 @@ class HuskyNode(Node):
         safety = float(self.get_parameter('safety_radius').value)
         keep_away = safety + float(self.get_parameter('goal_tolerance').value)
         within = float(self.get_parameter('look_from_current_within').value)
-        if attempt == 1 and robot is not None and within > 0.0:
+        if mode == 'investigate' and attempt == 1 and robot is not None and within > 0.0:
             distance = math.hypot(cx - robot[0], cy - robot[1])
             nearest_other = min(
                 (math.hypot(x - robot[0], y - robot[1]) for x, y in avoid),
@@ -287,6 +290,8 @@ class HuskyNode(Node):
         standoff = max(
             float(list_value(self.get_parameter('standoff_distances').value, attempt)),
             keep_away)
+        if mode == 'look':
+            standoff = float(self.get_parameter('look_standoff').value)
         offset = math.radians(float(list_value(
             self.get_parameter('attempt_angle_offsets_deg').value, attempt)))
         search = [math.radians(float(v))
@@ -421,7 +426,15 @@ class HuskyNode(Node):
     def _settle(self):
         self.job['phase'] = 'settling'
         self._report('settling')
+        if self.job['mode'] == 'look':
+            self._after(float(self.get_parameter('settle_sec').value), self._looked)
+            return
         self._after(float(self.get_parameter('settle_sec').value), self._call_verify)
+
+    def _looked(self):
+        job = self.job
+        self._end_job()
+        self._report('looked', job=job)
 
     def _call_verify(self):
         job = self.job

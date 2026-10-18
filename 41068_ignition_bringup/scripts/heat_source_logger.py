@@ -194,6 +194,9 @@ class HeatSourceLogger(Node):
         kind = event.get('kind', '')
         candidate = event.get('candidate_id', '')
         text = event.get('text', '')
+        if kind == 'sweep':      # thermal coverage sweep, not a heat source
+            self._out(text, CYAN)
+            return
         source = self.sources.setdefault(candidate, {'where': '-', 'trials': 0,
                                                      'result': 'pending'})
         if event.get('x') is not None:

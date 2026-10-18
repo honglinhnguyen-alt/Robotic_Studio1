@@ -35,9 +35,12 @@ import json
 import math
 from enum import Enum
 
+import cv2
+import numpy as np
 import rclpy
 import tf2_ros
 from geometry_msgs.msg import Point
+from nav_msgs.msg import OccupancyGrid
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy
 from rclpy.qos import QoSProfile
@@ -58,6 +61,7 @@ class MissionState(Enum):
     PAUSING = 2
     INVESTIGATING = 3
     COMPLETE = 4
+    SWEEPING = 5      # thermal coverage sweep after exploration (R1)
 
 
 class CandidateState(Enum):
@@ -256,6 +260,29 @@ def views_differ(bearings, min_separation):
                for i, a in enumerate(bearings) for b in bearings[i + 1:])
 
 
+def unchecked_clusters(grid, origin_x, origin_y, resolution, min_area_m2):
+    """Areas mapped free but never seen by the thermal camera.
+
+    grid: 2D array of coverage_tracker's thermal_coverage_grid (0 checked,
+    100 mapped free but unchecked, -1 other). Returns [(x, y, area_m2)] with
+    (x, y) an unchecked cell near the cluster centroid, largest first.
+    """
+    mask = (np.asarray(grid) == 100).astype(np.uint8)
+    count, labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    clusters = []
+    for label in range(1, count):
+        area = float(stats[label, cv2.CC_STAT_AREA]) * resolution * resolution
+        if area < min_area_m2:
+            continue
+        rows, cols = np.nonzero(labels == label)
+        cx, cy = centroids[label]
+        nearest = int(np.argmin((cols - cx) ** 2 + (rows - cy) ** 2))
+        clusters.append((origin_x + (cols[nearest] + 0.5) * resolution,
+                         origin_y + (rows[nearest] + 0.5) * resolution, area))
+    clusters.sort(key=lambda c: -c[2])
+    return clusters
+
+
 def yaw_from_quaternion(q):
     return math.atan2(
         2.0 * (q.w * q.z + q.x * q.y),
@@ -295,6 +322,19 @@ class MissionNode(Node):
         # A re-detected UNRESOLVED candidate (other than no_trained_animal_seen)
         # is investigated again this many times.
         self.declare_parameter('max_reopen', 1)
+        # Thermal coverage sweep (R1): after explore_lite has no frontier
+        # left, look at mapped areas the 60 deg thermal camera never saw.
+        self.declare_parameter('sweep_enabled', True)
+        self.declare_parameter('sweep_target_coverage', 0.95)   # thermal / accessible
+        self.declare_parameter('sweep_min_area_m2', 3.0)
+        self.declare_parameter('sweep_max_looks', 20)
+        self.declare_parameter('sweep_timeout_sec', 360.0)
+        self.declare_parameter('sweep_look_timeout_sec', 120.0)
+        self.declare_parameter('sweep_dwell_sec', 3.0)          # let thermal + registry react
+        self.declare_parameter('sweep_retry_radius', 2.0)       # skip targets near tried ones
+        self.declare_parameter('coverage_topic', '/husky1/mission/coverage')
+        self.declare_parameter('thermal_grid_topic',
+                               '/husky1/mission/thermal_coverage_grid')
         self.declare_parameter('duplicate_radius', 1.5)             # 0 disables
         # Only call it a duplicate if both records share a thermal track ID.
         self.declare_parameter('duplicate_requires_shared_track', True)
@@ -316,6 +356,11 @@ class MissionNode(Node):
         self.no_animal_separation = math.radians(
             float(p('no_animal_view_separation_deg').value))
         self.max_reopen = max(0, int(p('max_reopen').value))
+        self.sweep = {'enabled': bool(p('sweep_enabled').value), 'done': False,
+                      'started': None, 'looks': 0, 'tried': [], 'look_id': None,
+                      'look_started': None, 'dwell_until': None, 'target': None}
+        self.thermal_grid = None
+        self.thermal_coverage = None
         self.duplicate_radius = float(p('duplicate_radius').value)
         self.duplicate_requires_shared_track = bool(
             p('duplicate_requires_shared_track').value)
@@ -386,6 +431,11 @@ class MissionNode(Node):
             String, str(p('mission_log_topic').value), 50)
         self.going_logged = False
 
+        self.coverage_sub = self.create_subscription(
+            String, str(p('coverage_topic').value), self._coverage_callback, 10)
+        self.thermal_grid_sub = self.create_subscription(
+            OccupancyGrid, str(p('thermal_grid_topic').value),
+            lambda msg: setattr(self, 'thermal_grid', msg), latched)
         self.timer = self.create_timer(0.2, self._mission_tick)
         self.status_timer = self.create_timer(
             max(0.1, float(p('status_period_sec').value)), self._publish_ui_status)
@@ -416,9 +466,16 @@ class MissionNode(Node):
                 self._begin_investigation(candidate_id)
                 return
             if self.state == MissionState.COVERAGE and self.exploration_complete:
+                if self.sweep['enabled'] and not self.sweep['done']:
+                    self._start_sweep(now)
+                    return
                 self.state = MissionState.COMPLETE
                 self.get_logger().info('Exploration complete and no candidate left -> COMPLETE. '
                                        + self._summary_text())
+            return
+
+        if self.state == MissionState.SWEEPING:
+            self._sweep_tick(now)
             return
 
         if self.state == MissionState.PAUSING:
@@ -602,6 +659,12 @@ class MissionNode(Node):
         try:
             data = json.loads(msg.data)
         except ValueError:
+            return
+        if (self.state == MissionState.SWEEPING and self.sweep['look_id'] is not None
+                and data.get('candidate_id') == self.sweep['look_id']):
+            status = str(data.get('status', ''))
+            if status == 'looked' or status in HUSKY_FAILURES:
+                self._sweep_look_done(status)
             return
         if (
             self.state != MissionState.INVESTIGATING
@@ -861,6 +924,113 @@ class MissionNode(Node):
         self.get_logger().warning(
             f'explore_lite reports {status}: re-sending '
             f'{"resume" if wanted else "pause"}.')
+
+    # =============  Thermal coverage sweep  ==========================
+
+    def _coverage_callback(self, msg):
+        try:
+            self.thermal_coverage = float(json.loads(msg.data)['thermal_coverage'])
+        except (ValueError, KeyError, TypeError):
+            pass
+
+    def _start_sweep(self, now):
+        sweep = self.sweep
+        if sweep['started'] is None:
+            sweep['started'] = now
+            self._event('sweep', 'sweep',
+                        'THERMAL SWEEP: exploration finished, thermal coverage '
+                        f'{self._coverage_text()}; looking at unchecked areas')
+        self.state = MissionState.SWEEPING
+        sweep['look_id'] = None
+        sweep['dwell_until'] = None
+        self._pause_exploration()   # also cancels explore's return-home goal
+        self._publish_ui_status()
+
+    def _coverage_text(self):
+        return 'n/a' if self.thermal_coverage is None else f'{self.thermal_coverage:.0%}'
+
+    def _sweep_tick(self, now):
+        sweep = self.sweep
+        candidate_id = self._select_next_candidate()
+        if candidate_id is not None:
+            # A heat source seen during the sweep: investigate it first.
+            if sweep['look_id'] is not None:
+                self._send_husky_cancel()
+                sweep['look_id'] = None
+            self._begin_investigation(candidate_id)
+            return
+        if sweep['look_id'] is not None:
+            if now - sweep['look_started'] > float(
+                    self.get_parameter('sweep_look_timeout_sec').value):
+                self._send_husky_cancel()
+                self._sweep_look_done('timeout')
+            return
+        if sweep['dwell_until'] is not None and now < sweep['dwell_until']:
+            return
+        reason = self._next_sweep_look(now)
+        if reason is not None:
+            self._finish_sweep(reason)
+
+    def _next_sweep_look(self, now):
+        """Send the next look; return why the sweep ends, or None."""
+        sweep = self.sweep
+        p = self.get_parameter
+        target = float(p('sweep_target_coverage').value)
+        if self.thermal_coverage is not None and self.thermal_coverage >= target:
+            return f'thermal coverage {self._coverage_text()} >= {target:.0%}'
+        if sweep['looks'] >= int(p('sweep_max_looks').value):
+            return f'{sweep["looks"]} looks done'
+        if now - sweep['started'] > float(p('sweep_timeout_sec').value):
+            return 'sweep time budget used'
+        grid = self.thermal_grid
+        if grid is None:
+            return 'no thermal coverage grid (coverage_tracker not running)'
+        data = np.asarray(grid.data, dtype=np.int16).reshape(grid.info.height, grid.info.width)
+        retry = float(p('sweep_retry_radius').value)
+        clusters = [c for c in unchecked_clusters(
+                        data, grid.info.origin.position.x, grid.info.origin.position.y,
+                        grid.info.resolution, float(p('sweep_min_area_m2').value))
+                    if all(math.hypot(c[0] - x, c[1] - y) > retry for x, y in sweep['tried'])]
+        if not clusters:
+            return 'no unchecked area left that can be looked at'
+        robot = self._robot_pose()
+        if robot is not None:
+            clusters.sort(key=lambda c: math.hypot(c[0] - robot[0], c[1] - robot[1]))
+        x, y, area = clusters[0]
+        sweep['looks'] += 1
+        sweep['tried'].append((x, y))
+        sweep['look_id'] = f'sweep_{sweep["looks"]}'
+        sweep['look_started'] = now
+        sweep['target'] = (x, y)
+        self.phase = f'sweep look {sweep["looks"]}'
+        self._event('sweep', 'sweep',
+                    f'Look {sweep["looks"]}: unchecked area {area:.0f} m^2 at '
+                    f'({x:.1f}, {y:.1f}), thermal coverage {self._coverage_text()}')
+        self._publish_json(self.husky_command_pub, {
+            'command': 'look', 'candidate_id': sweep['look_id'], 'attempt': 1,
+            'x': x, 'y': y, 'frame_id': self.map_frame,
+            'avoid': [[c['x'], c['y']] for c in self.candidates.values()
+                      if c['state'] != CandidateState.DUPLICATE],
+        })
+        return None
+
+    def _sweep_look_done(self, status):
+        sweep = self.sweep
+        if status != 'looked':
+            self._event('sweep', 'sweep', f'Look {sweep["looks"]}: {status.replace("_", " ")}')
+        sweep['look_id'] = None
+        sweep['dwell_until'] = self._now() + float(self.get_parameter('sweep_dwell_sec').value)
+
+    def _finish_sweep(self, reason):
+        self.sweep['done'] = True
+        self.phase = 'idle'
+        self._event('sweep', 'sweep',
+                    f'THERMAL SWEEP done after {self.sweep["looks"]} look(s): {reason}')
+        # explore_lite has no frontier left, so resuming it sends the Husky home.
+        self._resume_exploration('thermal sweep finished')
+        self.exploration_complete = False
+        self.state = MissionState.COVERAGE
+        self._publish_ui_status()
 
     @staticmethod
     def _publish_json(publisher, payload):

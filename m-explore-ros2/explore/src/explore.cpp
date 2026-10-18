@@ -554,7 +554,12 @@ void Explore::finishExploration(const char* reason)
 
 void Explore::returnToInitialPose()
 {
-  RCLCPP_INFO(logger_, "Returning to initial pose.");
+  if (return_retry_timer_) {
+    return_retry_timer_->cancel();
+  }
+  ++return_attempts_;
+  RCLCPP_INFO(logger_, "Returning to initial pose (attempt %d/%d).", return_attempts_,
+              kMaxReturnAttempts);
   auto status_msg = explore_lite_msgs::msg::ExploreStatus();
   status_msg.status = explore_lite_msgs::msg::ExploreStatus::RETURNING_TO_ORIGIN;
   status_pub_->publish(status_msg);
@@ -574,6 +579,20 @@ void Explore::returnToInitialPose()
           status_msg.status = explore_lite_msgs::msg::ExploreStatus::RETURNED_TO_ORIGIN;
           status_pub_->publish(status_msg);
           RCLCPP_INFO(logger_, "Successfully returned to initial pose.");
+          return_attempts_ = 0;
+        } else if (result.code == rclcpp_action::ResultCode::ABORTED &&
+                   return_attempts_ < kMaxReturnAttempts) {
+          // Not CANCELED: that is a pause by the mission, which restarts the
+          // return itself when it resumes exploration.
+          RCLCPP_WARN(logger_, "Nav2 aborted the return home; retrying in 5 s.");
+          return_retry_timer_ = this->create_wall_timer(
+              std::chrono::seconds(5), [this]() {
+                return_retry_timer_->cancel();
+                returnToInitialPose();
+              });
+        } else if (result.code == rclcpp_action::ResultCode::ABORTED) {
+          RCLCPP_ERROR(logger_, "Return home failed %d times; giving up.",
+                       return_attempts_);
         }
       };
   move_base_client_->async_send_goal(goal, send_goal_options);
@@ -675,6 +694,10 @@ void Explore::stop(bool finished_exploring)
 
   exploring_timer_->cancel();
 
+  if (return_retry_timer_) {
+    return_retry_timer_->cancel();
+  }
+  return_attempts_ = 0;
   if (return_to_init_ && finished_exploring) {
     // Send the return goal only once Nav2 has answered the cancel. Sending it
     // straight after async_cancel_all_goals() let that cancel (which covers

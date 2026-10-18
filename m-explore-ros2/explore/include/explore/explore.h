@@ -188,6 +188,11 @@ private:
                                   // before declaring exploration complete
   int no_goal_cycles_ = 0;
 
+  // Return home: Nav2 can abort the long return trip; retry a few times.
+  int return_attempts_ = 0;
+  static constexpr int kMaxReturnAttempts = 3;
+  rclcpp::TimerBase::SharedPtr return_retry_timer_;
+
   geometry_msgs::msg::Point current_goal_;      // goal last sent to Nav2
   geometry_msgs::msg::Point current_centroid_;  // centroid of its frontier
   bool has_goal_ = false;

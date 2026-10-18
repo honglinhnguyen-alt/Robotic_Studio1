@@ -26,7 +26,11 @@
     enable_interactive_mode: true
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_travel_distance: 0.0
+    # Was 0.0: a scan was added to the pose graph every 0.5 s even while
+    # the Husky stood still (investigations, sweep looks). After ~18 min the
+    # graph was so large that map->odom TF fell > 0.2 s behind and Nav2
+    # could not plan or follow (return home failed).
+    minimum_travel_distance: 0.3
     minimum_travel_heading: 0.5
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0

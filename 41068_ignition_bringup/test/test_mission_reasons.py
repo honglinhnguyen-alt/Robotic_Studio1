@@ -40,3 +40,20 @@ def test_early_stop_needs_two_different_directions():
     assert not views_differ([0.5, 0.6], sep)                    # same side twice
     assert views_differ([0.5, 0.5 + math.radians(50)], sep)     # attempt 2 offset
     assert views_differ([math.pi - 0.1, -math.pi + 0.2], sep) is False  # wraps
+
+
+def test_unchecked_clusters_returns_large_unseen_areas_inside_them():
+    import numpy as np
+    from mission_node import unchecked_clusters
+    grid = np.full((100, 100), -1, dtype=np.int16)
+    grid[10:90, 10:90] = 0          # thermally checked
+    grid[20:40, 60:80] = 100        # 20 x 20 cells unchecked = 4 m^2 at 0.1 m
+    grid[70:73, 20:23] = 100        # 9 cells = 0.09 m^2, too small
+    clusters = unchecked_clusters(grid, -5.0, -5.0, 0.1, 3.0)
+    assert len(clusters) == 1
+    x, y, area = clusters[0]
+    assert abs(area - 4.0) < 1e-6
+    assert 1.0 <= x <= 3.0 and -3.0 <= y <= -1.0   # cols 60-80, rows 20-40
+    col = int(round((x + 5.0) / 0.1 - 0.5))
+    row = int(round((y + 5.0) / 0.1 - 0.5))
+    assert grid[row, col] == 100

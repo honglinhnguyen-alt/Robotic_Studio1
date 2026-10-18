@@ -40,6 +40,7 @@ MISSION_STATES = {
     "COVERAGE": ("Exploring", "#2563eb"),
     "PAUSING": ("Pausing exploration", "#d97706"),
     "INVESTIGATING": ("Investigating candidate", "#d97706"),
+    "SWEEPING": ("Thermal sweep (checking unseen areas)", "#7c3aed"),
     "COMPLETE": ("MISSION COMPLETE", "#15803d"),
 }
 
@@ -155,6 +156,10 @@ def describe_activity(status):
 
     if state == "COMPLETE":
         return "Exploration finished and every candidate has a result."
+
+    if state == "SWEEPING":
+        phase = status["phase"] or "planning"
+        return f"Looking at areas the thermal camera has not seen ({phase})"
 
     if current and state in ("PAUSING", "INVESTIGATING"):
         text = f"Candidate {current}"

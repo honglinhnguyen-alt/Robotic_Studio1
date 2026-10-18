@@ -30,6 +30,19 @@
     # A re-detected UNRESOLVED candidate (any reason except
     # no_trained_animal_seen) is investigated again at most this often.
     max_reopen: 1
+    # R1 thermal coverage sweep: when explore_lite has no frontier left, the
+    # mission looks at mapped areas the 60 deg thermal camera never saw
+    # (coverage_tracker grid) until thermal coverage >= target, no cluster
+    # >= min area is left, max looks or the time budget is used; then the
+    # Husky returns to its start.
+    sweep_enabled: true
+    sweep_target_coverage: 0.95
+    sweep_min_area_m2: 3.0
+    sweep_max_looks: 20
+    sweep_timeout_sec: 360.0
+    sweep_look_timeout_sec: 120.0
+    sweep_dwell_sec: 3.0
+    sweep_retry_radius: 2.0
     # A new registry record this close to an investigated candidate is
     # treated as the same animal (DUPLICATE) and is not visited again.
     # Seen from another side the same animal was localized up to ~1.1 m
@@ -76,6 +89,7 @@
     # bumper 0.5 m ahead of the centre that leaves >= ~1 m to the animal.
     standoff_distances: [3.5, 3.0, 2.5]
     safety_radius: 2.0                # m, robot centre to heat source
+    look_standoff: 4.0                # m, thermal sweep viewpoint distance
     goal_tolerance: 0.5               # = Nav2 xy_goal_tolerance
     attempt_angle_offsets_deg: [0.0, 50.0, -50.0]
     # Directions tried around that view until a free pose is found

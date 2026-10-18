@@ -234,7 +234,8 @@ controller_server:
       sim_time: 2.0
       linear_granularity: 0.2
       angular_granularity: 0.2
-      transform_tolerance: 0.2
+      # map->odom TF can lag a little behind on long missions (SLAM)
+      transform_tolerance: 0.5
 
       xy_goal_tolerance: 0.5
       yaw_goal_tolerance: 0.35
@@ -272,6 +273,7 @@ local_costmap:
       publish_frequency: 5.0
       global_frame: husky1_odom
       robot_base_frame: husky1_base_link
+      transform_tolerance: 0.5
       use_sim_time: true
       rolling_window: true
       width: 10
@@ -310,6 +312,7 @@ global_costmap:
       publish_frequency: 5.0
       global_frame: husky1_map
       robot_base_frame: husky1_base_link
+      transform_tolerance: 0.5
       use_sim_time: true
       footprint: '[ [0.55, 0.40], [0.55, -0.40], [-0.55, -0.40], [-0.55, 0.40] ]'  # Husky 0.99 x 0.69 m + ~5 cm
       # global paths keep 5 cm more clearance from trees than the robot footprint
