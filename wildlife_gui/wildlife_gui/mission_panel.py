@@ -29,6 +29,7 @@ from PyQt5.QtWidgets import (
 
 MISSION_STATUS_TOPIC = "/husky1/mission/status"
 EVALUATION_TOPIC = "/husky1/evaluation/summary"
+COVERAGE_TOPIC = "/husky1/mission/coverage"
 
 # A status older than this means mission_node is not publishing.
 STALE_AFTER_SEC = 3.0
@@ -191,6 +192,16 @@ def summary_lines(status):
     return lines
 
 
+def coverage_line(text):
+    """Return one line from a coverage_tracker JSON message."""
+    data = json.loads(text)
+    return (
+        f"Coverage: map {100.0 * float(data['lidar_coverage']):.0f}%  |  "
+        f"thermally checked {100.0 * float(data['thermal_coverage']):.0f}% "
+        f"of ~{float(data['accessible_m2']):.0f} m\u00b2 survey area"
+    )
+
+
 def evaluation_line(text):
     """Return one line from a spatial_evaluator summary JSON message."""
     data = json.loads(text)
@@ -221,6 +232,8 @@ class MissionPanel(QWidget):
         self.lock = threading.Lock()
         self.pending_status = None
         self.pending_evaluation = None
+        self.pending_coverage = None
+        self.coverage_text = ""
         self.last_status_time = None
 
         # Status bar placed above the map by the main window.
@@ -235,12 +248,15 @@ class MissionPanel(QWidget):
         self.activity_label.setWordWrap(True)
         self.counts_label = QLabel("")
         self.counts_label.setStyleSheet("font-size: 15px;")
+        self.coverage_label = QLabel(f"Coverage: waiting for {COVERAGE_TOPIC}...")
+        self.coverage_label.setStyleSheet("font-size: 15px;")
 
         bar_layout = QVBoxLayout(self.status_bar)
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.addWidget(self.state_label)
         bar_layout.addWidget(self.activity_label)
         bar_layout.addWidget(self.counts_label)
+        bar_layout.addWidget(self.coverage_label)
 
         # Tab content: candidate table and summary.
         self.table = QTableWidget(0, 7)
@@ -311,6 +327,13 @@ class MissionPanel(QWidget):
             evaluation_qos,
         )
 
+        self.coverage_sub = node.create_subscription(
+            String,
+            COVERAGE_TOPIC,
+            self.receive_coverage,
+            status_qos,
+        )
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(200)
@@ -325,14 +348,27 @@ class MissionPanel(QWidget):
         with self.lock:
             self.pending_evaluation = msg.data
 
+    def receive_coverage(self, msg):
+        with self.lock:
+            self.pending_coverage = msg.data
+
     def refresh(self):
         # Qt thread: update widgets here.
         with self.lock:
             status_text = self.pending_status
             evaluation_text = self.pending_evaluation
+            coverage_text = self.pending_coverage
             last_status_time = self.last_status_time
             self.pending_status = None
             self.pending_evaluation = None
+            self.pending_coverage = None
+
+        if coverage_text is not None:
+            try:
+                self.coverage_text = coverage_line(coverage_text)
+                self.coverage_label.setText(self.coverage_text)
+            except (ValueError, TypeError, KeyError) as exc:
+                self.coverage_label.setText(f"Coverage error: {exc}")
 
         if evaluation_text is not None:
             try:
@@ -404,7 +440,10 @@ class MissionPanel(QWidget):
             "Final mission summary" if state == "COMPLETE"
             else "Mission summary (live)"
         )
-        text = "\n".join(summary_lines(status))
+        lines = summary_lines(status)
+        if self.coverage_text:
+            lines.insert(1, self.coverage_text)
+        text = "\n".join(lines)
         if text != self.summary_text.toPlainText():
             # Rewriting the same text would reset the operator's scrolling.
             self.summary_text.setPlainText(text)

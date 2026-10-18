@@ -28,6 +28,7 @@ install(
     scripts/husky_node.py
     scripts/mission_node.py
     scripts/heat_source_logger.py
+    scripts/coverage_tracker.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

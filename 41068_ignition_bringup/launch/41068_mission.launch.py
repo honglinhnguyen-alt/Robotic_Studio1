@@ -6,6 +6,9 @@ Starts (each part can be switched off):
   spatial:=true     wildlife_spatial candidate_localizer + candidate_registry
   mission:=true     mission_node (R4) + husky_node (R3)
   evaluate:=true    wildlife_spatial spatial_evaluator (R7/R10 vs truth)
+  coverage:=true    coverage_tracker (R1: LiDAR map and thermal coverage)
+  record:=true      heat_source_logger: event log + run record in ~/wildtrack_runs
+                    (mission_summary_<stamp>.json, one row in runs.csv)
 
 Run the simulation first, e.g.
   ros2 launch 41068_ignition_bringup 41068_ignition_husky.launch.py \
@@ -14,6 +17,7 @@ Run the simulation first, e.g.
 world:= must name the same world as the simulation: the evaluator reads the
 animal and campfire poses from worlds/<world>.sdf. After moving animals with
 random_animal_spawn.py, pass ground_truth_file:=<json> instead.
+run_label:= names the scenario in runs.csv, e.g. run_label:=nominal_1.
 """
 
 from launch import LaunchDescription
@@ -116,6 +120,27 @@ def generate_launch_description():
         }],
         condition=IfCondition(LaunchConfiguration('evaluate')),
     )
+    coverage = Node(
+        package='41068_ignition_bringup',
+        executable='coverage_tracker.py',
+        name='coverage_tracker',
+        output='screen',
+        parameters=[mission_params, {'use_sim_time': sim_time}],
+        remappings=tf_remaps,
+        condition=IfCondition(LaunchConfiguration('coverage')),
+    )
+    recorder = Node(
+        package='41068_ignition_bringup',
+        executable='heat_source_logger.py',
+        name='heat_source_logger',
+        output='screen',
+        parameters=[{
+            'use_sim_time': sim_time,
+            'run_label': ParameterValue(LaunchConfiguration('run_label'), value_type=str),
+            'world': ParameterValue(LaunchConfiguration('world'), value_type=str),
+        }],
+        condition=IfCondition(LaunchConfiguration('record')),
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('namespace', default_value='husky1'),
@@ -140,6 +165,12 @@ def generate_launch_description():
                               description='Truth JSON overriding the world file.'),
         DeclareLaunchArgument('evaluation_dir', default_value='~/wildtrack_runs/evaluation',
                               description='Parent directory of evaluator run logs.'),
+        DeclareLaunchArgument('coverage', default_value='true',
+                              description='Start coverage_tracker.'),
+        DeclareLaunchArgument('record', default_value='true',
+                              description='Start heat_source_logger (run record).'),
+        DeclareLaunchArgument('run_label', default_value='',
+                              description='Scenario name written to runs.csv.'),
         explore,
         perception,
         localizer,
@@ -147,4 +178,6 @@ def generate_launch_description():
         mission,
         husky,
         evaluator,
+        coverage,
+        recorder,
     ])

@@ -72,3 +72,23 @@
     settle_sec: 1.5                   # stand still before asking YOLO
     verify_retries: 4                 # thermal needs 3 frames after turning
     verify_retry_sec: 1.0
+
+/**/coverage_tracker:
+  ros__parameters:
+    map_topic: /husky1/map
+    map_frame: husky1_map
+    camera_frame: husky1_thermal_camera_link
+    coverage_topic: /husky1/mission/coverage
+    grid_topic: /husky1/mission/thermal_coverage_grid
+    publish_grid: true
+    # Must match the thermal camera; depth (localisation) is clipped at 10 m.
+    thermal_hfov_deg: 60.0
+    thermal_range_m: 10.0
+    # R1 survey boundary: circle in the map frame (= world frame, the Husky
+    # starts at the origin). large_demo is ringed by cliffs ~35-38 m out.
+    boundary_center_x: 0.0
+    boundary_center_y: 0.0
+    boundary_radius: 30.0
+    cell_size: 0.2
+    update_period_sec: 0.5
+    publish_period_sec: 1.0

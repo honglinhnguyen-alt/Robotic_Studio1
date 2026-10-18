@@ -24,8 +24,9 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
   simulation ground truth (matched heat sources, mean error, within 1.0 m,
   boars correctly classified).
 - "Candidate registry" tab: the raw `candidate_registry` snapshot.
-
-Mission coverage is not implemented yet.
+- Coverage line under the counts (and in the summary): share of the survey
+  area mapped by LiDAR and checked by the thermal camera, from
+  `coverage_tracker.py`.
 
 Detection rows represent the latest processed image, not unique animals
 across the mission. Detection box coordinates are pixels, not map coordinates.
@@ -135,6 +136,7 @@ Actual detection updates may be slower.
 | `/husky1/candidates/registry_json` | `std_msgs/msg/String` (JSON) | Candidate registry table and map markers |
 | `/husky1/mission/status` | `std_msgs/msg/String` (JSON) | Mission state, candidate results and summary |
 | `/husky1/evaluation/summary` | `std_msgs/msg/String` (JSON) | Optional ground-truth check from `spatial_evaluator` |
+| `/husky1/mission/coverage` | `std_msgs/msg/String` (JSON) | Map and thermal coverage from `coverage_tracker` |
 
 Map frame: `husky1_map`.
 

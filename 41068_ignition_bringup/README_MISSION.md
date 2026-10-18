@@ -59,7 +59,9 @@ explore_lite ◄── pause / resume ── mission_node ──► /husky1/miss
 | `scripts/animal_yolo_detector.py` | Added the `perception/verify_now` service, `request_id` / `trigger` fields in the consensus JSON, and the `auto_verify_on_heat` parameter (default `true` = old behaviour). |
 | `launch/41068_thermal_yolo.launch.py` | New launch argument `auto_verify_on_heat` (default `true`). |
 | `launch/41068_mission.launch.py` | New: explore_lite + perception + localiser + registry + mission + husky in one launch. |
-| `config/mission_params.yaml` | New: all mission / husky parameters. |
+| `config/mission_params.yaml` | New: all mission / husky parameters; `coverage_tracker` section. |
+| `scripts/coverage_tracker.py` | New: R1 coverage — LiDAR-mapped and thermally checked share of the survey area. |
+| `scripts/heat_source_logger.py` | Event log; also writes the run record (mission summary JSON + one row in `runs.csv`). |
 | `package.xml` | `exec_depend explore_lite_msgs`. |
 | `CMakeLists.txt` | Installs `perception_overlay.py` (imported by the YOLO node; only worked before with `--symlink-install`). |
 
@@ -89,6 +91,58 @@ ros2 launch 41068_ignition_bringup 41068_mission.launch.py
 ```
 Switch parts off if you already run them elsewhere, e.g. `explore:=false`
 or `perception:=false`.
+
+The same launch also starts, unless switched off:
+
+| Argument | Node | Output |
+|---|---|---|
+| `evaluate:=true` | `spatial_evaluator` | `/husky1/evaluation/summary`; ground truth from `worlds/<world>.sdf` (`world:=` must match Terminal 1) or `ground_truth_file:=` |
+| `coverage:=true` | `coverage_tracker.py` | `/husky1/mission/coverage` (JSON), `/husky1/mission/thermal_coverage_grid` (OccupancyGrid for RViz) |
+| `record:=true` | `heat_source_logger.py` | `~/wildtrack_runs/heat_sources_<stamp>.log`, `mission_summary_<stamp>.json`, one row in `~/wildtrack_runs/runs.csv` |
+
+Name each scenario so the runs can be compared later, e.g.
+```bash
+ros2 launch 41068_ignition_bringup 41068_mission.launch.py run_label:=nominal_1
+```
+Do not also start `heat_source_logger.py` by hand while `record:=true`, or
+the run is recorded twice.
+
+### Run record (`~/wildtrack_runs/runs.csv`)
+
+The logger writes the record when the mission reaches COMPLETE, rewrites it
+if the mission leaves COMPLETE for a new candidate and reaches it again, and
+writes it once more when stopped (Ctrl-C). A run stopped before COMPLETE is
+kept with `completed=False`. One row per run:
+
+- `duration_s`: ROS (simulation) time from the first status after
+  INITIALISING to COMPLETE; `wall_duration_s`: logger wall-clock lifetime.
+- `exotic` … `pending`: mission_node candidate counts at the end.
+- `lidar_coverage_pct`, `thermal_coverage_pct`: last coverage_tracker values.
+- `truth_objects` … `boars_classified`: last spatial_evaluator summary
+  (R7 `mean_planar_error_m` / `within_tolerance`, R10 `boars_classified`).
+
+`mission_summary_<stamp>.json` holds the same row plus the final mission
+status (every candidate with its history fields), coverage and evaluation.
+
+### Coverage (R1)
+
+`coverage_tracker.py` keeps a 0.2 m grid over the survey boundary (a circle
+of `boundary_radius` = 30 m around the start; large_demo is ringed by cliffs
+35–38 m out). Every 0.5 s it ray-casts the thermal camera's 60° field of
+view, up to `thermal_range_m` = 10 m, on the SLAM map (occupied cells stop a
+ray) and marks the cells it reaches.
+
+- accessible ≈ boundary cells − cells the SLAM map marks occupied
+- `lidar_coverage` = known-free cells / accessible
+- `thermal_coverage` = known-free cells the thermal camera has looked at / accessible
+- `thermal_of_mapped` = the same over known-free cells only
+
+Unknown cells that are in fact inside rocks or unreachable count as
+accessible, so `lidar_coverage` stays below 100 % even after a complete
+exploration. The value is reported, not used: the mission still completes
+when explore_lite has no frontier left. In RViz, add a Map display on
+`/husky1/mission/thermal_coverage_grid`: 0 (light) = thermally checked,
+100 (dark) = mapped but never in the thermal view.
 
 **Terminal 3 – watch the mission**
 ```bash
@@ -143,6 +197,8 @@ ros2 topic echo /husky1/perception/thermal_yolo/result --field data
 | `duplicate_radius` | 1.5 | Two real animals closer than this → the second becomes DUPLICATE. 0 disables. |
 | `pause_settle_sec` | 1.5 | Husky goal cancelled right after the pause → larger. |
 | `look_from_current_within` | 4.0 | Attempt 1 only turns and looks when already this close. 0 = always drive. |
+| `boundary_radius` (coverage_tracker) | 30.0 | Survey area for R1 coverage; change with the world. |
+| `thermal_range_m` (coverage_tracker) | 10.0 | Distance at which the thermal camera counts an area as checked. |
 
 ## Notes and limitations
 
