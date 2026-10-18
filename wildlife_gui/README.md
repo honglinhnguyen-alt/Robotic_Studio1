@@ -8,7 +8,7 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
 - Middle pane: the thermal detector's annotated image (hot regions, track
   IDs, temperature) live; while the Husky verifies a candidate it switches
   to YOLO's annotated RGB image (projected thermal region, YOLO boxes and
-  votes) and keeps the last one for 10 s.
+  votes) and keeps the final (5/5) frame for 1.5 s.
 - Map markers coloured by mission result when `/husky1/mission/status` is
   available (red exotic, green native, amber unresolved, blue being
   checked, grey waiting); otherwise by the registry

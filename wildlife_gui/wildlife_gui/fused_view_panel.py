@@ -18,9 +18,10 @@ from PyQt5.QtWidgets import (
 THERMAL_TOPIC = "/husky1/perception/thermal/annotated_image"
 YOLO_TOPIC = "/husky1/perception/rgb/annotated_image"
 
-# Keep the last YOLO verification frame on screen this long before going
-# back to the live thermal view.
-YOLO_HOLD_SEC = 10.0
+# YOLO frames arrive at ~3 Hz while a candidate is verified (5 frames); the
+# pane stays on them and keeps the last one (the 5/5 result) this long
+# before going back to the live thermal view.
+YOLO_HOLD_SEC = 1.5
 STALE_AFTER_SEC = 3.0
 
 
@@ -93,7 +94,7 @@ class FusedViewPanel(QWidget):
             return
         age = now - source_time
         if source == "yolo":
-            text = f"YOLO + thermal verification ({age:.0f} s ago)"
+            text = "YOLO + thermal verification"
         elif age > STALE_AFTER_SEC:
             text = f"Thermal detections: stale ({age:.0f} s)"
         else:

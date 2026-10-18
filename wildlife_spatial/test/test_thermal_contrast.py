@@ -26,3 +26,13 @@ def test_local_background_is_the_ring_around_the_box():
     k = scene()
     hot = hot_mask(k, 'relative', 315.0, 10.0)
     assert local_background_k(k, hot, (100, 60, 20, 20), 6) == 293.0
+
+
+def test_cold_sky_does_not_pull_the_threshold_onto_the_trees():
+    k = np.full((120, 160), 290.8)        # cold sky fills most of the frame
+    k[40:70, :] = 300.7                   # band of trees
+    k[70:, :] = 293.0                     # ground
+    k[50:70, 70:90] = 329.0               # animal in front of the trees
+    hot = hot_mask(k, 'relative', 315.0, 10.0)
+    assert hot[60, 80]
+    assert not hot[45, 10]                # trees stay cold

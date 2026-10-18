@@ -901,7 +901,7 @@ class CandidateLocalizer(Node):
         if self._depth_selection == 'thermal_mask':
             self.get_logger().info(
                 'Depth selection: thermal_mask (only depth points on pixels '
-                + (f'>= {self._hot_delta_k:.1f} K above the frame median'
+                + (f'>= {self._hot_delta_k:.1f} K above the frame background'
                    if self._hot_mode == 'relative'
                    else f'>= {self._hot_threshold_k:.1f} K')
                 + f' from {thermal_image_topic}'

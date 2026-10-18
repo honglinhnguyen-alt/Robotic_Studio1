@@ -22,10 +22,6 @@
             <roughness>1</roughness>
           </metal></pbr>
         </material>
-        <!-- same background temperature as autumn_tree -->
-        <plugin filename="ignition-gazebo-thermal-system" name="gz::sim::systems::Thermal">
-          <temperature>300.15</temperature>
-        </plugin>
       </visual>
       <collision name="rock_collision">
         <geometry>

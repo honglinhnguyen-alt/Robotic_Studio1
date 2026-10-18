@@ -1,29 +1,36 @@
-"""Hot-pixel selection relative to the thermal background (R5).
+"""Hot-pixel selection relative to the thermal background (R5)."""
 
-Shared by the thermal candidate detector (which regions are heat sources)
-and the candidate localizer (which depth points lie on them), so both use
-the same definition of "hot".
+# Shared by the thermal candidate detector (which regions are heat sources)
+# and the candidate localizer (which depth points lie on them), so both use
+# the same definition of "hot".
+#
+# A pixel is hot when it is at least delta_k above the scene background,
+# the 75th percentile temperature of the frame (BACKGROUND_PERCENTILE). A
+# region is kept when it is also delta_k above its local background: the
+# median of a ring of non-hot pixels around its bounding box.
+#
+# In large_demo the ground is ~293 K and trees/rocks ~300.7 K (7.7 K warmer),
+# so a 3-5 K threshold would mark every tree; 10 K keeps vegetation out and
+# still finds animals far below the old fixed 315 K threshold. The 75th
+# percentile, not the median: frames with much cold sky had a median of
+# ~290.8 K, so the threshold fell to ~300.8 K, a hair above the trees, and
+# tree pixels behind an animal pulled its depth estimate (mean error 0.35 ->
+# 0.71 m in a run). The percentile follows the vegetation when it fills the
+# view and the ground otherwise.
 
-A pixel is hot when it is at least ``delta_k`` above the scene background,
-the median temperature of the frame. A region is kept when it is also
-``delta_k`` above its *local* background: the median of a ring of non-hot
-pixels around its bounding box.
-
-In large_demo the ground is ~293 K and trees/rocks ~300.7 K (7.7 K warmer),
-so a 3-5 K threshold would mark every tree; 10 K keeps vegetation out and
-still finds animals far below the old fixed 315 K threshold.
-"""
 
 import numpy as np
 
+BACKGROUND_PERCENTILE = 75.0
 
-def scene_background_k(kelvin):
-    """Median temperature of the finite pixels of a frame [K]."""
+
+def scene_background_k(kelvin, percentile=BACKGROUND_PERCENTILE):
+    """Background temperature of a frame: a percentile of its finite pixels [K]."""
     values = np.asarray(kelvin, dtype=float)
     values = values[np.isfinite(values)]
     if values.size == 0:
         return float('nan')
-    return float(np.median(values))
+    return float(np.percentile(values, percentile))
 
 
 def relative_hot_mask(kelvin, delta_k):
