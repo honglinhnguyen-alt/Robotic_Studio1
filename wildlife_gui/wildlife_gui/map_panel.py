@@ -44,7 +44,6 @@ MISSION_STALE_SEC = 5.0
 LEGEND = [
     ("#dc2626", "Exotic"),
     ("#15803d", "Native"),
-    ("#4b5563", "Not animal"),
     ("#b45309", "Unresolved"),
     ("#2563eb", "Checking"),
     ("#6b7280", "Waiting"),

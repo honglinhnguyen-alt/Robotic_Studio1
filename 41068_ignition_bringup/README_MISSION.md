@@ -43,9 +43,28 @@ explore_lite ◄── pause / resume ── mission_node ──► /husky1/miss
 |---|---|
 | exotic class, mean confidence ≥ 0.70 | `CONFIRMED_EXOTIC` |
 | native class, mean confidence ≥ 0.70 | `CONFIRMED_NATIVE` |
-| heat clearly seen but no animal box, 2 times | `REJECTED` (non-animal heat, e.g. campfire) |
-| low confidence / too far / partial / not in view / no heat / unreachable / timeout | next attempt (2.2 m, view rotated +50°; then 2.6 m, −50°) |
-| 3 attempts without a decision | `UNRESOLVED` |
+| heat clearly seen but no animal box, 2 times from directions ≥ 30° apart | `UNRESOLVED` (reason `no_trained_animal_seen`, e.g. campfire) |
+| low confidence / too far / partial / not in view / no heat / unreachable / timeout | next attempt (3.0 m, view rotated +50°; then 2.5 m, −50°) |
+| 3 attempts without a decision | `UNRESOLVED` with a reason |
+
+There is no "rejected / not an animal" outcome: YOLO knows three species, so
+a heat source without a box may still be an untrained or hidden animal.
+Every candidate ends confirmed or UNRESOLVED with one reason, chosen from
+its attempts in this order (the first that occurred wins, so a possible
+animal is never hidden behind a weaker reason):
+
+| Reason | Meaning for the ranger |
+|---|---|
+| `low_confidence` (+ class and score) | Possible animal, YOLO below 0.70: check first |
+| `no_trained_animal_seen` | Clear views, none of the trained species (fire, other species, hidden animal) |
+| `too_far` / `partial_view` | Never seen closely or fully |
+| `not_visible` | Heat source not visible from the observation poses |
+| `unreachable` | No observation pose could be reached |
+| `system_error` | YOLO unavailable or timed out |
+
+If a later detection falls within `duplicate_radius` of an UNRESOLVED
+candidate (any reason except `no_trained_animal_seen`), that candidate is
+investigated once more (`max_reopen`) instead of being skipped.
 
 8. If another candidate is waiting, the Husky goes there directly. Otherwise
    the mission **resumes** explore_lite.
@@ -54,7 +73,7 @@ explore_lite ◄── pause / resume ── mission_node ──► /husky1/miss
 
 | File | Change |
 |---|---|
-| `scripts/mission_node.py` | Rewritten: registry input, nearest-first, pause → settle → dispatch, result matching, 0.70 threshold, 3 attempts, Rejected/Unresolved, resume only when the Husky is idle, JSON status for the UI. |
+| `scripts/mission_node.py` | Rewritten: registry input, nearest-first, pause → settle → dispatch, result matching, 0.70 threshold, 3 attempts, Unresolved with reason/Unresolved, resume only when the Husky is idle, JSON status for the UI. |
 | `scripts/husky_node.py` | Rewritten: observation-pose selection against the SLAM map, Nav2 goal retries (max 3), face the candidate, `verify_now`, status reports, cancel. |
 | `scripts/animal_yolo_detector.py` | Added the `perception/verify_now` service, `request_id` / `trigger` fields in the consensus JSON, and the `auto_verify_on_heat` parameter (default `true` = old behaviour). |
 | `launch/41068_thermal_yolo.launch.py` | New launch argument `auto_verify_on_heat` (default `true`). |

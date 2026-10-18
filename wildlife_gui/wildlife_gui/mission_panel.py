@@ -50,7 +50,6 @@ CANDIDATE_STATES = {
     "investigating": ("Investigating", "#2563eb"),
     "confirmed_exotic": ("EXOTIC", "#dc2626"),
     "confirmed_native": ("Native", "#15803d"),
-    "rejected": ("Not an animal", "#4b5563"),
     "unresolved": ("Unresolved", "#b45309"),
     "duplicate": ("Duplicate", "#9ca3af"),
 }
@@ -58,11 +57,33 @@ CANDIDATE_STATES = {
 COUNT_LABELS = [
     ("exotic", "Exotic"),
     ("native", "Native"),
-    ("rejected", "Rejected"),
     ("unresolved", "Unresolved"),
+    ("unresolved_low_confidence", "of which possible animal"),
     ("pending", "Pending"),
     ("duplicate", "Duplicate"),
 ]
+
+# Why a candidate ended UNRESOLVED (mission_node.REASON_PRIORITY order:
+# a possible animal first).
+REASONS = [
+    ("low_confidence", "possible animal, low confidence"),
+    ("no_trained_animal_seen", "no trained animal seen"),
+    ("too_far", "too far to classify"),
+    ("partial_view", "only partly in view"),
+    ("not_visible", "heat source not visible"),
+    ("unreachable", "no observation pose reachable"),
+    ("system_error", "perception or navigation error"),
+]
+REASON_TEXT = dict(REASONS)
+REASON_ORDER = {key: index for index, (key, _) in enumerate(REASONS)}
+
+
+def result_text(row):
+    """Reason for UNRESOLVED candidates, else the last attempt's outcome."""
+    if row["state"] == "unresolved" and row["reason"]:
+        text = REASON_TEXT.get(row["reason"], row["reason"].replace("_", " "))
+        return f"{text}: {row['reason_detail']}" if row["reason_detail"] else text
+    return row["last_outcome"].replace("_", " ")
 
 
 def parse_mission_status(text):
@@ -110,6 +131,8 @@ def parse_mission_status(text):
             "y": y,
             "attempts": int(candidate.get("attempts") or 0),
             "last_outcome": str(candidate.get("last_outcome") or ""),
+            "reason": str(candidate.get("reason") or ""),
+            "reason_detail": str(candidate.get("reason_detail") or ""),
         })
 
     return {
@@ -182,10 +205,11 @@ def summary_lines(status):
             )
 
     if unresolved:
-        lines.append("Unresolved (check manually):")
+        lines.append("Needs a manual check (possible animals first):")
+        unresolved.sort(key=lambda row: REASON_ORDER.get(row["reason"], len(REASONS)))
         lines.extend(
             f"  {row['candidate_id']} at ({row['x']:.1f}, {row['y']:.1f}) m"
-            f" - last result: {row['last_outcome'].replace('_', ' ') or 'n/a'}"
+            f" - {result_text(row) or 'n/a'}"
             for row in unresolved
         )
 
@@ -267,7 +291,7 @@ class MissionPanel(QWidget):
             "Conf.",
             "Position (m)",
             "Attempts",
-            "Last result",
+            "Result / reason",
         ])
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -427,7 +451,7 @@ class MissionPanel(QWidget):
                 f"{row['confidence']:.0%}",
                 f"({row['x']:.1f}, {row['y']:.1f})",
                 str(row["attempts"]),
-                row["last_outcome"].replace("_", " "),
+                result_text(row),
             ]
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)

@@ -18,7 +18,7 @@ End-to-end flow (all topics are absolute, so the node can run in any namespace)
 
 Candidate states follow the C1 proposal (section 3.3):
   UNINVESTIGATED -> ASSIGNED -> INVESTIGATING -> CONFIRMED_EXOTIC /
-  CONFIRMED_NATIVE / REJECTED / UNRESOLVED
+  CONFIRMED_NATIVE / UNRESOLVED (with a reason)
 DUPLICATE marks a registry record that lies next to a candidate that was
 already investigated AND was built from the same thermal track, so the same
 animal is not visited twice. A different animal standing close by keeps its
@@ -66,7 +66,6 @@ class CandidateState(Enum):
     INVESTIGATING = 2
     CONFIRMED_EXOTIC = 3
     CONFIRMED_NATIVE = 4
-    REJECTED = 5
     UNRESOLVED = 6
     DUPLICATE = 7
 
@@ -74,7 +73,6 @@ class CandidateState(Enum):
 FINISHED_STATES = {
     CandidateState.CONFIRMED_EXOTIC,
     CandidateState.CONFIRMED_NATIVE,
-    CandidateState.REJECTED,
     CandidateState.UNRESOLVED,
     CandidateState.DUPLICATE,
 }
@@ -211,6 +209,53 @@ def describe_yolo(item, outcome, confirm_confidence):
     return f'YOLO -> no trained animal (unknown heat source, {best}/{frames} frames)'
 
 
+# Outcome of one attempt -> reason reported when the candidate ends UNRESOLVED.
+OUTCOME_REASON = {
+    'low_confidence': 'low_confidence',
+    'no_animal': 'no_trained_animal_seen',
+    'too_far': 'too_far',
+    'partial': 'partial_view',
+    'not_in_view': 'not_visible',
+    'no_heat': 'not_visible',
+    'no_heat_in_view': 'not_visible',
+    'unreachable': 'unreachable',
+}
+# First wins: "maybe an animal" must never be hidden behind a weaker reason.
+REASON_PRIORITY = [
+    'low_confidence', 'no_trained_animal_seen', 'too_far', 'partial_view',
+    'not_visible', 'unreachable', 'system_error',
+]
+REASON_TEXT = {
+    'low_confidence': 'low confidence',
+    'no_trained_animal_seen': 'no trained animal seen',
+    'too_far': 'too far to classify',
+    'partial_view': 'only partly in view',
+    'not_visible': 'heat source not visible',
+    'unreachable': 'no observation pose reachable',
+    'system_error': 'perception or navigation error',
+}
+
+
+def unresolved_reason(history):
+    """Return (reason, detail) for an UNRESOLVED candidate from its attempts."""
+    reasons = [OUTCOME_REASON.get(str(h.get('outcome')), 'system_error') for h in history]
+    if not reasons:
+        return 'system_error', ''
+    reason = min(reasons, key=REASON_PRIORITY.index)
+    detail = ''
+    if reason == 'low_confidence':
+        best = max((h for h in history if h.get('outcome') == 'low_confidence'),
+                   key=lambda h: float(h.get('confidence') or 0.0))
+        detail = f'{best.get("class_name")} {float(best.get("confidence") or 0.0):.2f}'
+    return reason, detail
+
+
+def views_differ(bearings, min_separation):
+    """True when two viewing directions (rad) differ by at least min_separation."""
+    return any(abs(wrap_angle(a - b)) >= min_separation
+               for i, a in enumerate(bearings) for b in bearings[i + 1:])
+
+
 def yaw_from_quaternion(q):
     return math.atan2(
         2.0 * (q.w * q.z + q.x * q.y),
@@ -242,7 +287,14 @@ class MissionNode(Node):
 
         self.declare_parameter('confirm_confidence', 0.70)          # R6
         self.declare_parameter('max_attempts', 3)                   # R4
-        self.declare_parameter('reject_after_no_animal_views', 2)
+        # Stop early (UNRESOLVED, no_trained_animal_seen) after this many clear
+        # views without a trained animal, from directions at least
+        # no_animal_view_separation_deg apart.
+        self.declare_parameter('no_animal_views_to_stop', 2)
+        self.declare_parameter('no_animal_view_separation_deg', 30.0)
+        # A re-detected UNRESOLVED candidate (other than no_trained_animal_seen)
+        # is investigated again this many times.
+        self.declare_parameter('max_reopen', 1)
         self.declare_parameter('duplicate_radius', 1.5)             # 0 disables
         # Only call it a duplicate if both records share a thermal track ID.
         self.declare_parameter('duplicate_requires_shared_track', True)
@@ -260,7 +312,10 @@ class MissionNode(Node):
         self.base_frame = str(p('base_frame').value)
         self.confirm_confidence = float(p('confirm_confidence').value)
         self.max_attempts = max(1, int(p('max_attempts').value))
-        self.reject_after = max(1, int(p('reject_after_no_animal_views').value))
+        self.no_animal_to_stop = max(1, int(p('no_animal_views_to_stop').value))
+        self.no_animal_separation = math.radians(
+            float(p('no_animal_view_separation_deg').value))
+        self.max_reopen = max(0, int(p('max_reopen').value))
         self.duplicate_radius = float(p('duplicate_radius').value)
         self.duplicate_requires_shared_track = bool(
             p('duplicate_requires_shared_track').value)
@@ -467,13 +522,16 @@ class MissionNode(Node):
         elif state == CandidateState.CONFIRMED_NATIVE:
             result = (f'{str(class_name).upper()} (NATIVE), confidence '
                       f'{float(confidence or 0.0):.2f}, after {trials} trial(s)')
-        elif state == CandidateState.REJECTED:
-            result = f'NOT A TRAINED ANIMAL (heat source rejected) after {trials} trial(s)'
         else:
-            result = f'UNRESOLVED after {trials} trial(s)'
+            reason, detail = unresolved_reason(candidate['history'])
+            candidate['reason'], candidate['reason_detail'] = reason, detail
+            candidate['class_name'] = 'unresolved'
+            text = REASON_TEXT[reason] + (f': {detail}' if detail else '')
+            result = f'UNRESOLVED ({text}) after {trials} trial(s)'
         self._event('result', candidate_id,
                     f'RESULT {candidate_id} at ({candidate["x"]:.2f}, {candidate["y"]:.2f}): '
-                    f'{result}', state=state.name.lower(), trials=trials, summary=result)
+                    f'{result}', state=state.name.lower(), trials=trials, summary=result,
+                    reason=candidate.get('reason', ''))
 
         self.current_candidate = None
         self.current_attempt = 0
@@ -519,15 +577,7 @@ class MissionNode(Node):
                 self._event('new', candidate_id,
                             f'NEW HEAT SOURCE {candidate_id} at ({x:.2f}, {y:.2f})')
                 if duplicate_of is not None:
-                    candidate['state'] = CandidateState.DUPLICATE
-                    candidate['last_outcome'] = f'duplicate_of:{duplicate_of}'
-                    self.get_logger().info(
-                        f'{candidate_id} is within {self.duplicate_radius:.1f} m of '
-                        f'{duplicate_of}; marked DUPLICATE.')
-                    self._event('result', candidate_id,
-                                f'RESULT {candidate_id} at ({x:.2f}, {y:.2f}): same object '
-                                f'as {duplicate_of} (skipped)', state='duplicate', trials=0,
-                                summary=f'same object as {duplicate_of} (skipped)')
+                    self._absorb_duplicate(candidate_id, duplicate_of)
                 else:
                     self.get_logger().info(
                         f'New candidate {candidate_id} at ({x:.2f}, {y:.2f})')
@@ -641,15 +691,22 @@ class MissionNode(Node):
             self._finish_candidate(state, item.get('class_name'), item.get('confidence'))
             return
         if outcome == 'no_animal':
-            candidate['no_animal_views'] += 1
-            if candidate['no_animal_views'] >= self.reject_after:
+            robot = self._robot_pose()
+            if robot is not None:
+                candidate['no_animal_bearings'].append(math.atan2(
+                    robot[1] - candidate['y'], robot[0] - candidate['x']))
+            bearings = candidate['no_animal_bearings']
+            if (len(bearings) >= self.no_animal_to_stop
+                    and views_differ(bearings, self.no_animal_separation)):
+                # Seen clearly from two directions and no trained animal: more
+                # attempts would not change that. Still UNRESOLVED, because a
+                # species YOLO was not trained on would look exactly the same.
                 self._event('trial', self.current_candidate,
                             f'Trial {self.current_attempt}: {trial_text}')
                 candidate['last_outcome'] = outcome
                 candidate['history'].append(
                     {'attempt': self.current_attempt, 'outcome': outcome, **detail})
-                self._finish_candidate(
-                    CandidateState.REJECTED, 'non_animal_heat_source', 0.0)
+                self._finish_candidate(CandidateState.UNRESOLVED)
                 return
         self._attempt_failed(outcome, detail, text=trial_text)
 
@@ -670,8 +727,9 @@ class MissionNode(Node):
             'registry_class': 'unknown', 'registry_confidence': 0.0,
             'observation_count': 0,
             'source_ids': set(),
-            'attempts': 0, 'no_animal_views': 0,
+            'attempts': 0, 'no_animal_bearings': [],
             'last_outcome': '', 'history': [],
+            'reason': '', 'reason_detail': '', 'reopened': 0,
         }
         self.candidates[candidate_id] = candidate
         return candidate
@@ -692,20 +750,42 @@ class MissionNode(Node):
             return other_id
         return None
 
+    def _absorb_duplicate(self, candidate_id, duplicate_of):
+        """Mark a re-detection DUPLICATE; give an UNRESOLVED original another look.
+
+        A new record next to an UNRESOLVED candidate means the animal was seen
+        again, maybe from a better side. Unless the earlier views were already
+        clear (no_trained_animal_seen), the original is investigated once more
+        (max_reopen) instead of being skipped forever.
+        """
+        candidate = self.candidates[candidate_id]
+        other = self.candidates[duplicate_of]
+        candidate['state'] = CandidateState.DUPLICATE
+        candidate['last_outcome'] = f'duplicate_of:{duplicate_of}'
+        reopen = (other['state'] == CandidateState.UNRESOLVED
+                  and other.get('reason') != 'no_trained_animal_seen'
+                  and other['reopened'] < self.max_reopen)
+        if reopen:
+            other['state'] = CandidateState.UNINVESTIGATED
+            other['reopened'] += 1
+            action = f'{duplicate_of} was UNRESOLVED ({other.get("reason")}): checking it again'
+        else:
+            action = 'skipped'
+        self.get_logger().info(
+            f'{candidate_id} is within {self.duplicate_radius:.1f} m of '
+            f'{duplicate_of}; marked DUPLICATE ({action}).')
+        self._event('result', candidate_id,
+                    f'RESULT {candidate_id} at ({candidate["x"]:.2f}, {candidate["y"]:.2f}): '
+                    f'same object as {duplicate_of} ({action})', state='duplicate',
+                    trials=0, summary=f'same object as {duplicate_of} ({action})')
+
     def _mark_duplicates(self):
         for candidate_id, candidate in self.candidates.items():
             if candidate['state'] != CandidateState.UNINVESTIGATED:
                 continue
             duplicate_of = self._finished_neighbour(candidate_id, candidate['x'], candidate['y'])
             if duplicate_of is not None:
-                candidate['state'] = CandidateState.DUPLICATE
-                candidate['last_outcome'] = f'duplicate_of:{duplicate_of}'
-                self.get_logger().info(f'{candidate_id} marked DUPLICATE of {duplicate_of}.')
-                self._event('result', candidate_id,
-                            f'RESULT {candidate_id} at ({candidate["x"]:.2f}, '
-                            f'{candidate["y"]:.2f}): same object as {duplicate_of} (skipped)',
-                            state='duplicate', trials=0,
-                            summary=f'same object as {duplicate_of} (skipped)')
+                self._absorb_duplicate(candidate_id, duplicate_of)
 
     def _select_next_candidate(self):
         pending = [cid for cid, c in self.candidates.items()
@@ -789,7 +869,8 @@ class MissionNode(Node):
         publisher.publish(msg)
 
     def _counts(self):
-        counts = {'exotic': 0, 'native': 0, 'rejected': 0, 'unresolved': 0,
+        counts = {'exotic': 0, 'native': 0, 'unresolved': 0,
+                  'unresolved_low_confidence': 0,
                   'pending': 0, 'duplicate': 0}
         for candidate in self.candidates.values():
             state = candidate['state']
@@ -797,10 +878,10 @@ class MissionNode(Node):
                 counts['exotic'] += 1
             elif state == CandidateState.CONFIRMED_NATIVE:
                 counts['native'] += 1
-            elif state == CandidateState.REJECTED:
-                counts['rejected'] += 1
             elif state == CandidateState.UNRESOLVED:
                 counts['unresolved'] += 1
+                if candidate.get('reason') == 'low_confidence':
+                    counts['unresolved_low_confidence'] += 1
             elif state == CandidateState.DUPLICATE:
                 counts['duplicate'] += 1
             else:
@@ -809,8 +890,10 @@ class MissionNode(Node):
 
     def _summary_text(self):
         c = self._counts()
-        return (f'exotic={c["exotic"]} native={c["native"]} rejected={c["rejected"]} '
-                f'unresolved={c["unresolved"]} duplicate={c["duplicate"]}')
+        return (f'exotic={c["exotic"]} native={c["native"]} '
+                f'unresolved={c["unresolved"]} '
+                f'(low confidence {c["unresolved_low_confidence"]}) '
+                f'duplicate={c["duplicate"]}')
 
     # =============  GUI information  =================================
 
@@ -834,6 +917,8 @@ class MissionNode(Node):
                 'observation_count': c['observation_count'],
                 'attempts': c['attempts'],
                 'last_outcome': c['last_outcome'],
+                'reason': c.get('reason', ''),
+                'reason_detail': c.get('reason_detail', ''),
             })
         self._publish_json(self.ui_status_pub, {
             'frame_id': self.map_frame,

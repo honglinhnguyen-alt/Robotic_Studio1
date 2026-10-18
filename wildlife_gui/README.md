@@ -10,8 +10,8 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
   to YOLO's annotated RGB image (projected thermal region, YOLO boxes and
   votes) and keeps the last one for 10 s.
 - Map markers coloured by mission result when `/husky1/mission/status` is
-  available (red exotic, green native, dark grey not an animal, amber
-  unresolved, blue being checked, grey waiting); otherwise by the registry
+  available (red exotic, green native, amber unresolved, blue being
+  checked, grey waiting); otherwise by the registry
   class (boar red, deer and kangaroo green).
 - SLAM occupancy map.
 - Husky position and heading on the map using TF.
@@ -23,11 +23,11 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
   attempt, Husky phase or explore_lite status) and result counts. It turns
   orange when `mission_node` stops publishing for more than 3 s.
 - "Mission results" tab: every candidate known to `mission_node` with its
-  mission state (Waiting, Investigating, EXOTIC, Native, Not an animal,
-  Unresolved, Duplicate), class, confidence, map position, attempts and last
-  result; a live summary that becomes the final mission summary on
-  COMPLETE (exotic and native animals with positions, unresolved candidates
-  to check manually).
+  mission state (Waiting, Investigating, EXOTIC, Native, Unresolved,
+  Duplicate), class, confidence, map position, attempts and the result or,
+  for Unresolved, the reason; a live summary that becomes the final mission
+  summary on COMPLETE (exotic and native animals with positions, then the
+  unresolved candidates to check manually, possible animals first).
 - When `spatial_evaluator` runs, the summary also shows its comparison with
   simulation ground truth (matched heat sources, mean error, within 1.0 m,
   boars correctly classified).

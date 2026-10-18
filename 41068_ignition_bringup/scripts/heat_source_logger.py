@@ -14,7 +14,7 @@ Example:
   t=   9.8s candidate_1  Trial 1: YOLO -> no trained animal (unknown heat source, 0/5 frames)
   t=   9.8s candidate_1  Trial 2: Husky -> observation pose (7.30, -5.60), 2.2 m from it
   t=  17.3s candidate_1  Trial 2: YOLO -> no trained animal (unknown heat source, 0/5 frames)
-  t=  17.3s RESULT candidate_1 at (9.30, -4.70): NOT A TRAINED ANIMAL (heat source rejected) ...
+  t=  17.3s RESULT candidate_1 at (9.30, -4.70): UNRESOLVED (no trained animal seen) after 2 trial(s)
   t=  17.3s candidate_2  Trial 1: Husky -> observation pose (15.30, -3.90), 3.0 m from it
   t=  24.8s candidate_2  Trial 1: YOLO -> boar 0.87 (exotic, 4/5 frames)
   t=  24.8s RESULT candidate_2 at (17.40, -1.70): BOAR (EXOTIC), confidence 0.87, after 1 trial(s)
@@ -54,8 +54,8 @@ YELLOW, GREEN, CYAN, RED, BOLD, RESET = (
 # runs are not rewritten.
 RUN_CSV_FIELDS = [
     'stamp', 'run_label', 'world', 'completed', 'duration_s', 'wall_duration_s',
-    'exploration_status', 'candidates', 'exotic', 'native', 'rejected',
-    'unresolved', 'duplicate', 'pending',
+    'exploration_status', 'candidates', 'exotic', 'native',
+    'unresolved', 'unresolved_low_confidence', 'duplicate', 'pending',
     'lidar_coverage_pct', 'thermal_coverage_pct',
     'truth_objects', 'matched', 'false_positives', 'precision', 'recall',
     'mean_planar_error_m', 'max_planar_error_m', 'within_tolerance',
@@ -120,7 +120,8 @@ def run_record(stamp, run_label, world, completed, mission_start, mission_end,
         'boars_classified': boar.get('correctly_classified', ''),
         'log_file': log_file,
     }
-    for key in ('exotic', 'native', 'rejected', 'unresolved', 'duplicate', 'pending'):
+    for key in ('exotic', 'native', 'unresolved', 'unresolved_low_confidence',
+                'duplicate', 'pending'):
         row[key] = counts.get(key, '')
     return {
         'row': row,

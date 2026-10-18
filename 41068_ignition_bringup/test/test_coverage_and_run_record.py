@@ -87,7 +87,8 @@ def test_coverage_stats_counts_mapped_and_thermally_checked_area():
 STATUS = {
     'mission_state': 'COMPLETE',
     'exploration_status': 'exploration_complete',
-    'counts': {'exotic': 2, 'native': 3, 'rejected': 1, 'unresolved': 1,
+    'counts': {'exotic': 2, 'native': 3, 'unresolved': 2,
+               'unresolved_low_confidence': 1,
                'pending': 0, 'duplicate': 0},
     'candidates': [{}] * 7,
 }

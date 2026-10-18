@@ -184,3 +184,31 @@ def test_static_ground_truth_matches_large_demo_world():
 
     assert static['objects'] == ground_truth_objects_from_world(
         LARGE_DEMO_WORLD)
+
+
+def test_mission_verdicts_replace_classes_and_drop_duplicates():
+    from wildlife_spatial.spatial_evaluator import apply_mission_verdicts
+    estimates = [
+        make_detection('candidate_1', 'unknown_heat_source', 1.0, 2.0),
+        make_detection('candidate_2', 'deer', 5.0, -6.0),
+        make_detection('candidate_3', 'boar', 1.4, 2.1),
+        make_detection('candidate_4', 'kangaroo', 9.0, 9.0),
+    ]
+    verdicts = {
+        'candidate_1': ('confirmed_exotic', 'boar'),
+        'candidate_2': ('unresolved', 'unresolved'),
+        'candidate_3': ('duplicate', 'boar'),
+    }
+    result = apply_mission_verdicts(estimates, verdicts)
+    assert [e.id for e in result] == ['candidate_1', 'candidate_2', 'candidate_4']
+    assert [e.results[0].hypothesis.class_id for e in result] == [
+        'boar', 'unresolved', 'kangaroo']
+    # The registry message itself is not modified.
+    assert estimates[0].results[0].hypothesis.class_id == 'unknown_heat_source'
+
+    truth = [
+        make_detection('boar_01', 'boar', 1.0, 2.0),
+        make_detection('campfire2', 'campfire', 5.0, -6.0),
+    ]
+    metrics = evaluate_detections(result[:2], truth, 2.0)
+    assert metrics['classification_accuracy'] == pytest.approx(1.0)

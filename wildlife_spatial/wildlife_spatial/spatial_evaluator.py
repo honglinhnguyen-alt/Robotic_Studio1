@@ -2,6 +2,7 @@
 
 """Log and evaluate R2 candidate estimates against simulation truth."""
 
+import copy
 import csv
 from datetime import datetime
 import json
@@ -298,6 +299,28 @@ def load_world_ground_truth(path, frame_id, model_classes=None):
         frame_id, ground_truth_objects_from_world(path, model_classes))
 
 
+def apply_mission_verdicts(estimates, verdicts):
+    """Use mission_node's final decision for each registry estimate."""
+    # verdicts: candidate_id -> (state, class_name). DUPLICATE records are the
+    # same animal as another record and are dropped. Confirmed candidates get
+    # the confirmed class, UNRESOLVED ones the label "unresolved" (wrong for an
+    # animal, correct for a campfire). Undecided records keep the registry class.
+    result = []
+    for estimate in estimates:
+        state, class_name = verdicts.get(estimate.id, (None, None))
+        if state == 'duplicate':
+            continue
+        if state in ('confirmed_exotic', 'confirmed_native', 'unresolved'):
+            estimate = copy.deepcopy(estimate)
+            label = class_name if state != 'unresolved' else 'unresolved'
+            if not estimate.results:
+                estimate.results.append(ObjectHypothesisWithPose())
+            estimate.results[0].hypothesis.class_id = str(label)
+            del estimate.results[1:]
+        result.append(estimate)
+    return result
+
+
 def evaluation_rows(metrics, estimates, ground_truth):
     """Return detailed matched and unmatched rows for one evaluation."""
     rows = []
@@ -372,6 +395,8 @@ class SpatialEvaluator(Node):
             '/husky1/evaluation/summary',
         )
         self.declare_parameter('ground_truth_file', '')
+        # Score classes by mission_node's final decision ('' disables).
+        self.declare_parameter('mission_status_topic', '/husky1/mission/status')
         # SDF world used when ground_truth_file is empty.
         self.declare_parameter('ground_truth_world', '')
         self.declare_parameter('map_frame', 'husky1_map')
@@ -451,6 +476,11 @@ class SpatialEvaluator(Node):
         self._registry = None
         self._ground_truth = None
         self._evaluation_index = 0
+        self._verdicts = {}
+        mission_topic = str(self.get_parameter('mission_status_topic').value)
+        if mission_topic:
+            self._mission_sub = self.create_subscription(
+                String, mission_topic, self._mission_callback, 10)
         ground_truth_source = ground_truth_file or ground_truth_world
         if ground_truth_file:
             self._ground_truth = load_ground_truth(ground_truth_file)
@@ -479,6 +509,21 @@ class SpatialEvaluator(Node):
         self._registry = message
         self._evaluate_if_ready()
 
+    def _mission_callback(self, message):
+        try:
+            candidates = json.loads(message.data).get('candidates', [])
+            verdicts = {
+                str(c['candidate_id']): (str(c.get('state', '')),
+                                         str(c.get('class_name') or 'unknown'))
+                for c in candidates
+            }
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return
+        # Re-evaluate only when a decision changed (status arrives at 2 Hz).
+        if verdicts != self._verdicts:
+            self._verdicts = verdicts
+            self._evaluate_if_ready()
+
     def _ground_truth_callback(self, message):
         self._ground_truth = message
         self._evaluate_if_ready()
@@ -500,7 +545,7 @@ class SpatialEvaluator(Node):
             return
 
         self._evaluation_index += 1
-        estimates = self._registry.detections
+        estimates = apply_mission_verdicts(self._registry.detections, self._verdicts)
         ground_truth = self._ground_truth.detections
         metrics = evaluate_detections(
             estimates,

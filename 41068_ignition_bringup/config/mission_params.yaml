@@ -19,8 +19,17 @@
 
     confirm_confidence: 0.70          # R6: confirm a class only at >= 0.70
     max_attempts: 3                   # R4 / C1 3.3: 3 attempts, then UNRESOLVED
-    # Heat clearly seen but no animal box in this many attempts -> REJECTED
-    reject_after_no_animal_views: 2
+    # Every candidate ends CONFIRMED_EXOTIC / CONFIRMED_NATIVE or UNRESOLVED
+    # with a reason (low_confidence > no_trained_animal_seen > too_far >
+    # partial_view > not_visible > unreachable > system_error). YOLO only
+    # knows three species, so "no animal box" never proves "not an animal".
+    # Stop early (no_trained_animal_seen) after this many clear views without
+    # a trained animal, taken from directions >= the separation apart:
+    no_animal_views_to_stop: 2
+    no_animal_view_separation_deg: 30.0
+    # A re-detected UNRESOLVED candidate (any reason except
+    # no_trained_animal_seen) is investigated again at most this often.
+    max_reopen: 1
     # A new registry record this close to an investigated candidate is
     # treated as the same animal (DUPLICATE) and is not visited again.
     # Seen from another side the same animal was localized up to ~1.1 m
