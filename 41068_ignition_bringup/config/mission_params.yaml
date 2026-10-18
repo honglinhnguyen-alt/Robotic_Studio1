@@ -61,8 +61,13 @@
     # C1 3.3: observation pose 2-4 m from the candidate.
     # Keep the decimal point in these lists (ROS declares them as doubles).
     # Attempt k uses element k-1: distance and rotation of the view around
-    # the candidate (0 = the robot's side).
-    standoff_distances: [3.0, 2.2, 2.6]
+    # the candidate (0 = the robot's side). Each retry looks from another
+    # angle and a little closer, but never closer than
+    # safety_radius + goal_tolerance (2.5 m) to any heat source: with the
+    # bumper 0.5 m ahead of the centre that leaves >= ~1 m to the animal.
+    standoff_distances: [3.5, 3.0, 2.5]
+    safety_radius: 2.0                # m, robot centre to heat source
+    goal_tolerance: 0.5               # = Nav2 xy_goal_tolerance
     attempt_angle_offsets_deg: [0.0, 50.0, -50.0]
     # Directions tried around that view until a free pose is found
     search_offsets_deg: [0.0, 25.0, -25.0, 50.0, -50.0, 80.0, -80.0, 120.0, -120.0, 180.0]

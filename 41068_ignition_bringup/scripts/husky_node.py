@@ -106,6 +106,10 @@ class GridChecker:
     def is_clear(self, x, y, radius, allow_unknown):
         col = int(math.floor((x - self.origin_x) / self.resolution))
         row = int(math.floor((y - self.origin_y) / self.resolution))
+        # Off the SLAM map Nav2 cannot plan at all; each such goal only failed
+        # after ~20 s of recoveries (9 goals per candidate).
+        if not (0 <= col < self.width and 0 <= row < self.height):
+            return False
         centre = self.value(col, row)
         if centre >= self.occupied_threshold:
             return False
@@ -129,6 +133,12 @@ def pick_viewpoints(poses, checker, radius, max_count):
     unknown = [p for p in poses
                if p not in known and checker.is_clear(p[0], p[1], radius, allow_unknown=True)]
     return (known + unknown)[:max_count]
+
+
+def outside_safety(poses, points, radius):
+    """Drop poses closer than radius to any of the given (x, y) heat sources."""
+    return [p for p in poses
+            if all(math.hypot(p[0] - x, p[1] - y) >= radius for x, y in points)]
 
 
 def list_value(values, attempt):
@@ -156,7 +166,7 @@ class HuskyNode(Node):
         self.declare_parameter('verify_service', '/husky1/perception/verify_now')
 
         # Attempt k uses element k-1 (the last element repeats).
-        self.declare_parameter('standoff_distances', [3.0, 2.2, 2.6])
+        self.declare_parameter('standoff_distances', [3.5, 3.0, 2.5])
         self.declare_parameter('attempt_angle_offsets_deg', [0.0, 50.0, -50.0])
         self.declare_parameter(
             'search_offsets_deg',
@@ -167,6 +177,12 @@ class HuskyNode(Node):
         # Attempt 1: if the robot is already this close, only turn and look.
         self.declare_parameter('look_from_current_within', 4.0)     # 0 disables
         self.declare_parameter('min_view_distance', 1.5)
+        # The Husky never stops closer than this to any heat source (robot
+        # centre to source estimate). Observation poses are placed at least
+        # safety_radius + goal_tolerance away so Nav2's goal tolerance cannot
+        # bring it inside.
+        self.declare_parameter('safety_radius', 2.0)
+        self.declare_parameter('goal_tolerance', 0.5)       # Nav2 xy_goal_tolerance
         self.declare_parameter('face_tolerance_deg', 10.0)
         self.declare_parameter('spin_time_allowance_sec', 15.0)
         self.declare_parameter('settle_sec', 1.5)
@@ -227,6 +243,8 @@ class HuskyNode(Node):
             candidate_id = str(data['candidate_id'])
             attempt = int(data['attempt'])
             cx, cy = float(data['x']), float(data['y'])
+            # Other known heat sources: no observation pose next to them.
+            avoid = [(float(x), float(y)) for x, y in data.get('avoid', []) or []]
         except (KeyError, TypeError, ValueError):
             self.get_logger().warning(f'Incomplete investigate command: {msg.data}')
             return
@@ -235,9 +253,9 @@ class HuskyNode(Node):
             return  # duplicate command
         if self.job is not None:
             self._stop_job('replaced by a new command')
-        self._start_job(candidate_id, attempt, cx, cy)
+        self._start_job(candidate_id, attempt, cx, cy, avoid)
 
-    def _start_job(self, candidate_id, attempt, cx, cy):
+    def _start_job(self, candidate_id, attempt, cx, cy, avoid=()):
         self.job_token += 1
         self.job = {
             'candidate_id': candidate_id, 'attempt': attempt,
@@ -250,23 +268,33 @@ class HuskyNode(Node):
             f'Investigate {candidate_id} (attempt {attempt}) at ({cx:.2f}, {cy:.2f})')
 
         robot = self._robot_pose()
+        safety = float(self.get_parameter('safety_radius').value)
+        keep_away = safety + float(self.get_parameter('goal_tolerance').value)
         within = float(self.get_parameter('look_from_current_within').value)
         if attempt == 1 and robot is not None and within > 0.0:
             distance = math.hypot(cx - robot[0], cy - robot[1])
-            if float(self.get_parameter('min_view_distance').value) <= distance <= within:
+            nearest_other = min(
+                (math.hypot(x - robot[0], y - robot[1]) for x, y in avoid),
+                default=math.inf)
+            closest = max(float(self.get_parameter('min_view_distance').value), safety)
+            if closest <= distance <= within and nearest_other >= safety:
                 self.get_logger().info(
                     f'Already {distance:.1f} m from the candidate: look from here.')
                 self.job['viewpoint'] = {'x': robot[0], 'y': robot[1], 'yaw': robot[2]}
                 self._face_candidate()
                 return
 
-        standoff = float(list_value(self.get_parameter('standoff_distances').value, attempt))
+        standoff = max(
+            float(list_value(self.get_parameter('standoff_distances').value, attempt)),
+            keep_away)
         offset = math.radians(float(list_value(
             self.get_parameter('attempt_angle_offsets_deg').value, attempt)))
         search = [math.radians(float(v))
                   for v in self.get_parameter('search_offsets_deg').value]
-        poses = viewpoint_candidates(
-            (cx, cy), None if robot is None else robot[:2], standoff, offset, search)
+        poses = outside_safety(
+            viewpoint_candidates(
+                (cx, cy), None if robot is None else robot[:2], standoff, offset, search),
+            avoid, keep_away)
         checker = GridChecker(self.grid) if self.grid is not None else None
         self.job['viewpoints'] = pick_viewpoints(
             poses, checker,

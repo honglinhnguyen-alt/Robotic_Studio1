@@ -423,6 +423,10 @@ class MissionNode(Node):
             'max_attempts': self.max_attempts,
             'x': candidate['x'],
             'y': candidate['y'],
+            # Other heat sources: husky_node keeps its safety radius from them.
+            'avoid': [[c['x'], c['y']] for other_id, c in self.candidates.items()
+                      if other_id != self.current_candidate
+                      and c['state'] != CandidateState.DUPLICATE],
             'frame_id': self.map_frame,
         })
         self.get_logger().info(

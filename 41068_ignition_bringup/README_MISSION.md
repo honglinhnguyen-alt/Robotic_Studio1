@@ -192,7 +192,8 @@ ros2 topic echo /husky1/perception/thermal_yolo/result --field data
 | Parameter (config/mission_params.yaml) | Default | When to change |
 |---|---|---|
 | `confirm_confidence` | 0.70 | R6 threshold. |
-| `standoff_distances` | [3.0, 2.2, 2.6] | Poses too close to trees → larger. YOLO too_far → smaller. |
+| `standoff_distances` | [3.5, 3.0, 2.5] | Observation distance per attempt: each retry a little closer. YOLO too_far → smaller. |
+| `safety_radius` | 2.0 | No observation pose within safety_radius + goal_tolerance (2.5 m) of any known heat source, including other candidates; "look from here" only from >= 2.0 m. |
 | `bearing_tolerance_deg` | 15 | Results rejected as `not_in_view` although the animal is centred → larger. |
 | `duplicate_radius` | 2.5 | A new record this close to an investigated one is the same animal seen from another side (DUPLICATE, not visited). large_demo keeps heat sources >= 6 m apart; lower it, or set `duplicate_requires_shared_track: true`, for worlds with animals closer together. 0 disables. |
 | `pause_settle_sec` | 1.5 | Husky goal cancelled right after the pause → larger. |
