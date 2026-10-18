@@ -28,6 +28,37 @@ from std_msgs.msg import String
 from html import escape
 from PyQt5.QtWidgets import QToolTip
 
+from wildlife_gui.mission_panel import CANDIDATE_STATES
+from wildlife_gui.mission_panel import MISSION_STATUS_TOPIC
+
+
+# Without mission status: colour by the registry class (deer is native).
+CLASS_COLOURS = {
+    "kangaroo": "#15803d",
+    "deer": "#15803d",
+    "boar": "#dc2626",
+}
+UNKNOWN_COLOUR = "#9ca3af"
+# Mission status older than this falls back to the registry markers.
+MISSION_STALE_SEC = 5.0
+LEGEND = [
+    ("#dc2626", "Exotic"),
+    ("#15803d", "Native"),
+    ("#4b5563", "Not animal"),
+    ("#b45309", "Unresolved"),
+    ("#2563eb", "Checking"),
+    ("#6b7280", "Waiting"),
+]
+LEGEND_ITEM_WIDTH = 110
+
+
+def marker_colour(animal):
+    """Marker colour: mission state when known, else registry class."""
+    state = animal.get("state")
+    if state:
+        return CANDIDATE_STATES.get(state, (state, UNKNOWN_COLOUR))[1]
+    return CLASS_COLOURS.get(animal["class_name"], UNKNOWN_COLOUR)
+
 
 def quaternion_yaw(q):
     return math.atan2(
@@ -92,7 +123,20 @@ class MapPanel(QWidget):
             "/husky1/candidates/registry_json",
             self.receive_registry,
             map_qos,
-        )        
+        )
+
+        # mission_node's status uses the registry keys plus each candidate's
+        # mission state, so markers turn red/green once the type is known.
+        self.pending_mission = None
+        self.mission_animals = None
+        self.mission_frame = ""
+        self.last_mission_time = None
+        self.mission_sub = node.create_subscription(
+            String,
+            MISSION_STATUS_TOPIC,
+            self.receive_mission,
+            10,
+        )
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(100)
@@ -105,6 +149,36 @@ class MapPanel(QWidget):
     def receive_registry(self, msg):
         with self.lock:
             self.pending_registry = msg.data
+
+    def receive_mission(self, msg):
+        with self.lock:
+            self.pending_mission = msg.data
+            self.last_mission_time = time.monotonic()
+
+    def update_mission(self, text):
+        try:
+            payload = json.loads(text)
+            frame = payload["frame_id"]
+            animals = []
+            for candidate in payload["candidates"]:
+                position = candidate["position"]
+                x = float(position["x"])
+                y = float(position["y"])
+                if not math.isfinite(x) or not math.isfinite(y):
+                    continue
+                animals.append({
+                    "id": str(candidate["candidate_id"]),
+                    "class_name": str(candidate.get("class_name") or "unknown")
+                    .strip().lower(),
+                    "state": str(candidate.get("state") or ""),
+                    "x": x,
+                    "y": y,
+                })
+            self.mission_animals = animals
+            self.mission_frame = str(frame)
+        except (ValueError, TypeError, KeyError, AttributeError):
+            # Keep the previous mission snapshot.
+            pass
 
     def update_registry(self, text):
         try:
@@ -169,12 +243,16 @@ class MapPanel(QWidget):
         with self.lock:
             msg = self.pending_map
             registry_text = self.pending_registry
+            mission_text = self.pending_mission
 
             self.pending_map = None
             self.pending_registry = None
+            self.pending_mission = None
 
         if registry_text is not None:
             self.update_registry(registry_text)
+        if mission_text is not None:
+            self.update_mission(mission_text)
 
         if msg is not None:
             try:
@@ -294,12 +372,17 @@ class MapPanel(QWidget):
         animal_status = self.registry_status
         self.animal_hit_targets = []
 
+        # The legend wraps onto extra rows when the panel is narrow.
+        legend_per_row = max(1, int((self.width() - 10) // LEGEND_ITEM_WIDTH))
+        legend_rows = -(-len(LEGEND) // legend_per_row)
+        legend_height = 18 * (legend_rows - 1)
+
         if self.map_image is not None:
             area = QRectF(
                 10,
                 65,
                 self.width() - 20,
-                self.height() - 130,
+                self.height() - 130 - legend_height,
             )
 
             width = self.map_info.width
@@ -333,7 +416,7 @@ class MapPanel(QWidget):
         painter.drawText(
             QRectF(
                 10,
-                self.height() - 60,
+                self.height() - 60 - legend_height,
                 self.width() - 20,
                 32,
             ),
@@ -341,19 +424,15 @@ class MapPanel(QWidget):
             animal_status,
         )
 
-        legend = [
-            ("#22c55e", "Native"),
-            ("#ef4444", "Exotic"),
-            ("#9ca3af", "Unknown"),
-        ]
-
-        legend_x = 10
-        legend_y = self.height() - 15
-
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
 
-        for color, label in legend:
+        for index, (color, label) in enumerate(LEGEND):
+            legend_x = 10 + (index % legend_per_row) * LEGEND_ITEM_WIDTH
+            legend_y = (
+                self.height() - 15 - legend_height
+                + 18 * (index // legend_per_row)
+            )
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(color))
             painter.drawEllipse(
@@ -364,12 +443,10 @@ class MapPanel(QWidget):
 
             painter.setPen(QColor("white"))
             painter.drawText(
-                QRectF(legend_x + 15, legend_y - 10, 70, 20),
+                QRectF(legend_x + 15, legend_y - 10, 95, 20),
                 Qt.AlignLeft | Qt.AlignVCenter,
                 label,
             )
-
-            legend_x += 90
 
         painter.restore()
         painter.end()
@@ -437,20 +514,28 @@ class MapPanel(QWidget):
         painter.restore()
 
     def draw_animals(self, painter, left, top, scale):
-        if not self.registry_frame:
-            return self.registry_status
+        mission_fresh = (
+            self.mission_animals is not None
+            and self.last_mission_time is not None
+            and time.monotonic() - self.last_mission_time < MISSION_STALE_SEC
+        )
+        if mission_fresh:
+            animals = self.mission_animals
+            frame = self.mission_frame
+            source_status = f"Candidates: {len(animals)} (mission results)"
+        else:
+            animals = self.animals
+            frame = self.registry_frame
+            source_status = self.registry_status
 
-        if self.registry_frame != self.map_frame:
+        if not frame:
+            return source_status
+
+        if frame != self.map_frame:
             return (
-                f"Animals hidden: registry frame "
-                f"{self.registry_frame} != map frame {self.map_frame}"
+                f"Animals hidden: candidate frame "
+                f"{frame} != map frame {self.map_frame}"
             )
-
-        colors = {
-            "kangaroo": "#22c55e",
-            "deer": "#ef4444",
-            "boar": "#ef4444",
-        }
 
         origin = self.map_info.origin
         origin_yaw = quaternion_yaw(origin.orientation)
@@ -471,7 +556,7 @@ class MapPanel(QWidget):
         painter.setClipRect(target)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        for animal in self.animals:
+        for animal in animals:
             dx = animal["x"] - origin.position.x
             dy = animal["y"] - origin.position.y
 
@@ -490,9 +575,7 @@ class MapPanel(QWidget):
                 top + (self.map_info.height - grid_y) * scale
             )
 
-            color = QColor(
-                colors.get(animal["class_name"], "#9ca3af")
-            )
+            color = QColor(marker_colour(animal))
 
             # Larger marker with a dark outline.
             painter.setPen(QPen(QColor("#111827"), 2))
@@ -511,7 +594,7 @@ class MapPanel(QWidget):
 
         painter.restore()
 
-        status = self.registry_status
+        status = source_status
         if outside_count:
             status += f" | Outside map: {outside_count}"
 
@@ -537,11 +620,17 @@ class MapPanel(QWidget):
             animal = nearest_animal
             identifier = escape(animal["id"])
             class_name = escape(animal["class_name"])
+            state = animal.get("state")
+            state_line = (
+                f"Mission: {escape(CANDIDATE_STATES.get(state, (state,))[0])}<br>"
+                if state else ""
+            )
 
             QToolTip.showText(
                 event.globalPos(),
                 (
                     f"<b>{identifier}</b><br>"
+                    f"{state_line}"
                     f"Class: {class_name}<br>"
                     f"X: {animal['x']:.2f} m<br>"
                     f"Y: {animal['y']:.2f} m"

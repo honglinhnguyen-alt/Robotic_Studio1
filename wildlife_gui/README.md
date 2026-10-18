@@ -4,7 +4,15 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
 
 ## Current features
 
-- Live RGB camera.
+- Three image panes: SLAM map | thermal + YOLO | live RGB camera.
+- Middle pane: the thermal detector's annotated image (hot regions, track
+  IDs, temperature) live; while the Husky verifies a candidate it switches
+  to YOLO's annotated RGB image (projected thermal region, YOLO boxes and
+  votes) and keeps the last one for 10 s.
+- Map markers coloured by mission result when `/husky1/mission/status` is
+  available (red exotic, green native, dark grey not an animal, amber
+  unresolved, blue being checked, grey waiting); otherwise by the registry
+  class (boar red, deer and kangaroo green).
 - SLAM occupancy map.
 - Husky position and heading on the map using TF.
 - Odometry position and heading.
@@ -88,13 +96,12 @@ ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
 source /opt/ros/humble/setup.bash
 source ~/41068_ws/install/setup.bash
 
-ros2 run wildlife_gui gui --ros-args \
-  -p use_sim_time:=true \
-  -r /tf:=/husky1/tf \
-  -r /tf_static:=/husky1/tf_static
+ros2 run wildlife_gui gui
 ```
 
-The TF remappings are required for the robot marker on the map.
+The GUI remaps `/tf` and `/tf_static` to `/husky1/tf` and
+`/husky1/tf_static` itself (needed for the robot marker on the map).
+Remaps given on the command line take precedence.
 
 Closing the GUI does not stop the simulation.
 
@@ -137,6 +144,8 @@ Actual detection updates may be slower.
 | `/husky1/mission/status` | `std_msgs/msg/String` (JSON) | Mission state, candidate results and summary |
 | `/husky1/evaluation/summary` | `std_msgs/msg/String` (JSON) | Optional ground-truth check from `spatial_evaluator` |
 | `/husky1/mission/coverage` | `std_msgs/msg/String` (JSON) | Map and thermal coverage from `coverage_tracker` |
+| `/husky1/perception/thermal/annotated_image` | `sensor_msgs/msg/Image` | Middle pane, live |
+| `/husky1/perception/rgb/annotated_image` | `sensor_msgs/msg/Image` | Middle pane while YOLO verifies |
 
 Map frame: `husky1_map`.
 

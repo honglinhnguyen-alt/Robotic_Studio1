@@ -34,6 +34,7 @@ from PyQt5.QtWidgets import (
 from wildlife_gui.detections_panel import DetectionsPanel
 from wildlife_gui.animal_records_panel import AnimalRecordsPanel
 from wildlife_gui.mission_panel import MissionPanel
+from wildlife_gui.fused_view_panel import FusedViewPanel
 from PyQt5.QtWidgets import QTabWidget
 
 class WildlifeNode(Node):
@@ -147,12 +148,15 @@ class WildlifeWindow(QWidget):
         )
 
         self.map_panel = MapPanel(self.node)
+        # Middle: thermal detections, or YOLO + thermal while verifying.
+        self.fused_panel = FusedViewPanel(self.node)
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.map_panel)
+        splitter.addWidget(self.fused_panel)
         splitter.addWidget(self.camera_label)
         splitter.setChildrenCollapsible(False)
-        splitter.setSizes([600, 600])
+        splitter.setSizes([450, 450, 450])
 
         layout = QVBoxLayout(self)
         layout.addWidget(title)
@@ -192,7 +196,7 @@ class WildlifeWindow(QWidget):
 
         layout.addWidget(self.main_splitter, stretch=1)
 
-        self.resize(1250, 850)
+        self.resize(1400, 850)
 
         # Display new data at up to 20 updates per second.
         self.display_timer = QTimer(self)
@@ -330,6 +334,7 @@ class WildlifeWindow(QWidget):
         self.detections_panel.timer.stop()
         self.animal_records_panel.stop()
         self.mission_panel.stop()
+        self.fused_panel.stop()
 
     def closeEvent(self, event):
         self.stop_timers()
@@ -350,7 +355,17 @@ def main(args=None):
     if "cv2" in os.environ.get("QT_QPA_FONTDIR", ""):
         os.environ.pop("QT_QPA_FONTDIR", None)
 
-    rclpy.init(args=args)
+    # The Husky's TF is published on /husky1/tf; without these remaps the
+    # map shows "Waiting for TF" and no robot marker. Explicit remaps on the
+    # command line still take precedence.
+    ros_args = list(sys.argv if args is None else args)
+    if not any(arg.startswith("/tf:=") for arg in ros_args):
+        ros_args += [
+            "--ros-args",
+            "-r", "/tf:=/husky1/tf",
+            "-r", "/tf_static:=/husky1/tf_static",
+        ]
+    rclpy.init(args=ros_args)
     app = QApplication(sys.argv)
 
     node = WildlifeNode()
