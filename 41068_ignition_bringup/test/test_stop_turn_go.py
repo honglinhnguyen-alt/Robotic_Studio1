@@ -123,3 +123,10 @@ def test_never_linear_and_angular_together():
         v, w = gate.step(now, rng.uniform(-0.5, 1.0), rng.uniform(-1.5, 1.5), heading,
                          rng.random() < 0.2, rng.uniform(-0.1, 0.1), rng.uniform(-0.2, 0.2))
         assert v == 0.0 or w == 0.0
+
+
+def test_backup_recovery_reverses_straight_when_allowed():
+    gate = MotionGate(allow_reverse=True)
+    assert run(gate, 5, -0.05, 0.0, (0.5, 2.0))[-1] == (-0.05, 0.0)
+    gate = MotionGate(allow_reverse=False)
+    assert run(gate, 5, -0.05, 0.0, (0.5, 2.0))[-1] == (0.0, 0.0)

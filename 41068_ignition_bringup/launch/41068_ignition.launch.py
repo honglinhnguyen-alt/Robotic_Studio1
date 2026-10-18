@@ -181,7 +181,9 @@ def add_robot(
                 'corridor_half_width': 0.45,
                 'corridor_start': 0.35,
                 'minimum_stop_time': 0.10,
-                'allow_reverse': False,
+                # Straight reversing is still one motion; Nav2's BackUp recovery
+                # was blocked and timed out (10 s standing still) when False.
+                'allow_reverse': True,
             }],
             # Reads the robot pose in the map frame for the path heading.
             remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')],
