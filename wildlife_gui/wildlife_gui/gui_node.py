@@ -33,6 +33,7 @@ from PyQt5.QtWidgets import (
 )
 from wildlife_gui.detections_panel import DetectionsPanel
 from wildlife_gui.animal_records_panel import AnimalRecordsPanel
+from wildlife_gui.mission_panel import MissionPanel
 from PyQt5.QtWidgets import QTabWidget
 
 class WildlifeNode(Node):
@@ -158,13 +159,21 @@ class WildlifeWindow(QWidget):
         layout.addWidget(self.position_label)
         layout.addWidget(self.connection_label)
 
+        # Mission state stays visible above the map and camera.
+        self.mission_panel = MissionPanel(self.node)
+        layout.addWidget(self.mission_panel.status_bar)
+
         self.detections_panel = DetectionsPanel(self.node)
         self.animal_records_panel = AnimalRecordsPanel(self.node)
 
         self.records_tabs = QTabWidget()
         self.records_tabs.addTab(
+            self.mission_panel,
+            "Mission results",
+        )
+        self.records_tabs.addTab(
             self.animal_records_panel,
-            "Animal records",
+            "Candidate registry",
         )
         self.records_tabs.addTab(
             self.detections_panel,
@@ -178,12 +187,12 @@ class WildlifeWindow(QWidget):
         self.main_splitter.setChildrenCollapsible(False)
 
         self.main_splitter.setStretchFactor(0, 3)
-        self.main_splitter.setStretchFactor(1, 1)
-        self.main_splitter.setSizes([480, 180])
+        self.main_splitter.setStretchFactor(1, 2)
+        self.main_splitter.setSizes([450, 300])
 
         layout.addWidget(self.main_splitter, stretch=1)
 
-        self.resize(1250, 750)
+        self.resize(1250, 850)
 
         # Display new data at up to 20 updates per second.
         self.display_timer = QTimer(self)
@@ -320,6 +329,7 @@ class WildlifeWindow(QWidget):
         self.map_panel.timer.stop()
         self.detections_panel.timer.stop()
         self.animal_records_panel.stop()
+        self.mission_panel.stop()
 
     def closeEvent(self, event):
         self.stop_timers()

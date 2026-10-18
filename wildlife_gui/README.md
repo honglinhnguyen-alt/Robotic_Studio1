@@ -10,8 +10,22 @@ ROS 2 Humble / PyQt5 GUI for monitoring the Husky simulation.
 - Odometry position and heading.
 - Latest RGB animal detections, including class, confidence and bounding box.
 - Receiving/stale indicators for camera, odometry and detections.
+- Mission status bar above the map: mission state (Exploring, Investigating
+  candidate, MISSION COMPLETE), what the robot is doing now (candidate,
+  attempt, Husky phase or explore_lite status) and result counts. It turns
+  orange when `mission_node` stops publishing for more than 3 s.
+- "Mission results" tab: every candidate known to `mission_node` with its
+  mission state (Waiting, Investigating, EXOTIC, Native, Not an animal,
+  Unresolved, Duplicate), class, confidence, map position, attempts and last
+  result; a live summary that becomes the final mission summary on
+  COMPLETE (exotic and native animals with positions, unresolved candidates
+  to check manually).
+- When `spatial_evaluator` runs, the summary also shows its comparison with
+  simulation ground truth (matched heat sources, mean error, within 1.0 m,
+  boars correctly classified).
+- "Candidate registry" tab: the raw `candidate_registry` snapshot.
 
-Exploration status, mission status and mission coverage are not implemented yet.
+Mission coverage is not implemented yet.
 
 Detection rows represent the latest processed image, not unique animals
 across the mission. Detection box coordinates are pixels, not map coordinates.
@@ -118,6 +132,9 @@ Actual detection updates may be slower.
 | `/husky1/tf` | `tf2_msgs/msg/TFMessage` | Dynamic transforms |
 | `/husky1/tf_static` | `tf2_msgs/msg/TFMessage` | Static transforms |
 | `/husky1/perception/rgb/detections` | `vision_msgs/msg/Detection2DArray` | Latest RGB detections |
+| `/husky1/candidates/registry_json` | `std_msgs/msg/String` (JSON) | Candidate registry table and map markers |
+| `/husky1/mission/status` | `std_msgs/msg/String` (JSON) | Mission state, candidate results and summary |
+| `/husky1/evaluation/summary` | `std_msgs/msg/String` (JSON) | Optional ground-truth check from `spatial_evaluator` |
 
 Map frame: `husky1_map`.
 
