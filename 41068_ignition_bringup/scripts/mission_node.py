@@ -277,6 +277,8 @@ class MissionNode(Node):
         self.exploration_complete = False
         self.exploration_paused = False
         self.pause_started = None
+        self.last_explore_command = -math.inf
+        self.explore_resend_sec = 1.0
 
         # ---------------- Candidates ----------------
         self.candidates = {}
@@ -344,6 +346,7 @@ class MissionNode(Node):
 
     def _mission_tick(self):
         now = self._now()
+        self._enforce_exploration_state(now)
 
         if self.state == MissionState.INITIALISING:
             if bool(self.get_parameter('resume_exploration_on_start').value):
@@ -739,6 +742,7 @@ class MissionNode(Node):
         msg.data = True
         self.exploration_resume_pub.publish(msg)
         self.exploration_paused = False
+        self.last_explore_command = self._now()
         self.get_logger().info(f'Resume sent to exploration ({reason}).')
 
     def _pause_exploration(self):
@@ -746,7 +750,33 @@ class MissionNode(Node):
         msg.data = False
         self.exploration_resume_pub.publish(msg)
         self.exploration_paused = True
+        self.last_explore_command = self._now()
         self.get_logger().info('Pause sent to exploration.')
+
+    def _enforce_exploration_state(self, now):
+        """Re-send pause/resume until explore_lite reports the wanted state.
+
+        The resume topic is volatile: a pause sent before explore_lite has
+        subscribed (a candidate in the first seconds) was lost, and explore
+        kept sending Nav2 goals that pre-empted every observation pose.
+        """
+        status = self.exploration_status
+        running = status in ('exploration_started', 'exploration_in_progress')
+        if self.exploration_paused and running:
+            wanted = False
+        elif not self.exploration_paused and status == 'exploration_paused':
+            wanted = True
+        else:
+            return
+        if now - self.last_explore_command < self.explore_resend_sec:
+            return
+        self.last_explore_command = now
+        msg = Bool()
+        msg.data = wanted
+        self.exploration_resume_pub.publish(msg)
+        self.get_logger().warning(
+            f'explore_lite reports {status}: re-sending '
+            f'{"resume" if wanted else "pause"}.')
 
     @staticmethod
     def _publish_json(publisher, payload):

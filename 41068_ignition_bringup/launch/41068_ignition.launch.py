@@ -175,6 +175,10 @@ def add_robot(
                 'turn_enter_threshold': 0.35,
                 'turn_exit_threshold': 0.08,
                 'lookahead_distance': 0.8,
+                # In-place turns below ~1.0 rad/s commanded do not turn the
+                # simulated Husky (measured); it then turns at ~0.5 rad/s.
+                'minimum_turn_speed': 1.0,
+                'maximum_turn_speed': 1.0,
                 # Keep equal to max_vel_x in nav2_params_husky1.yaml.
                 'maximum_linear_speed': 1.0,
                 'stopping_distance': 0.9,

@@ -84,7 +84,15 @@ def test_small_heading_error_drives_without_stopping():
 def test_nav2_pure_rotation_is_passed_through():
     gate = MotionGate()
     out = run(gate, 5, 0.0, -0.8, None)
-    assert out[-1] == (0.0, -0.8)
+    assert out[-1] == (0.0, -1.0)
+
+
+def test_slow_rotation_request_is_raised_to_a_speed_that_turns_the_husky():
+    # RotationShim asked for 0.32 rad/s from standstill; the simulated Husky
+    # does not turn below ~1.0 rad/s commanded, so this stalled for 10 s.
+    gate = MotionGate()
+    out = run(gate, 5, 0.0, 0.32, (1.0, 2.0))
+    assert out[-1] == (0.0, 1.0)
 
 
 def test_obstacle_blocks_driving_but_not_turning():

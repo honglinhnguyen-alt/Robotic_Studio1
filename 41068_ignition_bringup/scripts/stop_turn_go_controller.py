@@ -103,7 +103,7 @@ class MotionGate:
     MOVING = 'MOVING'
 
     def __init__(self, turn_enter=0.35, turn_exit=0.08, rotate_gain=1.5,
-                 min_turn_speed=0.5, max_turn_speed=1.0, max_linear_speed=1.0,
+                 min_turn_speed=1.0, max_turn_speed=1.0, max_linear_speed=1.0,
                  linear_request=0.02, angular_request=0.05,
                  fallback_turn_enter=0.30, fallback_turn_exit=0.10,
                  min_turn_distance=0.3, minimum_stop_time=0.10,
@@ -230,8 +230,13 @@ class StopTurnGoController(Node):
         self.declare_parameter('turn_enter_threshold', 0.35)    # ~20 deg -> stop and turn
         self.declare_parameter('turn_exit_threshold', 0.08)     # ~5 deg -> stop and drive
         self.declare_parameter('rotate_gain', 1.5)              # w = gain * error
-        self.declare_parameter('minimum_turn_speed', 0.5)       # rad/s, Husky turns reliably
-        self.declare_parameter('maximum_turn_speed', 1.0)       # rad/s
+        # Measured in large_demo (Gazebo Fortress): an in-place turn command of
+        # 0.5-0.6 rad/s does not move the Husky at all, 0.7-0.8 only sometimes,
+        # and from 1.0 rad/s it turns at its limit of ~0.5 rad/s. RotationShim
+        # limits its own command by the MEASURED rate, so below the threshold
+        # it never got the robot turning (10 s stalls, failed Spin recoveries).
+        self.declare_parameter('minimum_turn_speed', 1.0)       # rad/s commanded
+        self.declare_parameter('maximum_turn_speed', 1.0)       # rad/s commanded
         self.declare_parameter('maximum_linear_speed', 1.0)     # m/s
         self.declare_parameter('min_turn_distance', 0.3)        # m: no turning onto the last point
         self.declare_parameter('path_timeout', 10.0)            # s: older path -> fallback
