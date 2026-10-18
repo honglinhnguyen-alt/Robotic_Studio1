@@ -190,10 +190,25 @@ depth estimate often lies on the visible body surface.
 | Input | `/simulation/ground_truth/animals` | `vision_msgs/msg/Detection3DArray` | Live R5 ground truth, when available. |
 | Output | `/husky1/evaluation/summary` | `std_msgs/msg/String` | Latest metrics as JSON. |
 
-The evaluator can also load ground truth from a JSON file. The included
-`config/static_large_demo_ground_truth.json` contains the four trained animal
-objects at their original positions in `large_demo.sdf`. It must not be used
-after the animals have been randomized unless the file is updated.
+The evaluator can also load ground truth from a JSON file
+(`ground_truth_file`) or straight from an SDF world (`ground_truth_world`).
+From a world it keeps every `<include>` of a heat-source model: boar,
+male/female deer (class `deer`), kangaroo and campfire. Poses are used as
+map coordinates because the Husky spawns at the world origin with zero yaw.
+`41068_mission.launch.py` starts the evaluator with
+`worlds/<world>.sdf`, so `world:=` must match the simulation.
+
+`config/static_large_demo_ground_truth.json` is generated from
+`large_demo.sdf` (5 boars, 4 deer, 3 kangaroos, 2 campfires);
+`test_static_ground_truth_matches_large_demo_world` fails when the two
+drift apart. Neither source is valid after the animals have been moved by
+`random_animal_spawn.py`.
+
+A campfire counts as correctly classified when its estimate carries no
+animal label (for example `unknown_heat_source`). The summary also reports
+`within_tolerance_count` (R7, planar error <= `localization_tolerance`) and
+`per_class` detection/classification recall; `per_class.boar` is the R10
+figure.
 
 #### Evaluator parameters
 
@@ -203,8 +218,11 @@ after the animals have been randomized unless the file is updated.
 | `ground_truth_topic` | `/simulation/ground_truth/animals` | Live R5 truth input. |
 | `summary_topic` | `/husky1/evaluation/summary` | JSON metric output. |
 | `ground_truth_file` | empty | Optional static truth JSON file. |
+| `ground_truth_world` | empty | SDF world used when `ground_truth_file` is empty. |
 | `map_frame` | `husky1_map` | Required estimate and truth frame. |
 | `maximum_match_distance` | `2.0` | Maximum XY distance for estimate/truth matching. |
+| `localization_tolerance` | `1.0` | R7 planar error limit for `within_tolerance_count`. |
+| `non_animal_classes` | `[campfire]` | Truth classes that must not get an animal label. |
 | `output_directory` | `~/wildlife_evaluation_logs` | Parent directory for run logs. |
 
 Each evaluator process creates a directory similar to:
@@ -361,7 +379,7 @@ ros2 run wildlife_spatial spatial_evaluator \
 With only the default kangaroo observed, a reasonable result is:
 
 ```text
-Evaluation 1: matched=1/4, mean planar error=0.094 m, class accuracy=100.0%
+Evaluation 1: matched=1/14, mean planar error=0.094 m, within 1.0 m=1, class accuracy=100.0%, boars confirmed=0/5
 ```
 
 `matched=1/4` is correct until the Husky observes the other three animals.

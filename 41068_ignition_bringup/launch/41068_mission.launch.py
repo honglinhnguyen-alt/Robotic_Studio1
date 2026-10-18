@@ -5,10 +5,15 @@ Starts (each part can be switched off):
   perception:=true  thermal detector + thermal-gated YOLO (41068_thermal_yolo)
   spatial:=true     wildlife_spatial candidate_localizer + candidate_registry
   mission:=true     mission_node (R4) + husky_node (R3)
+  evaluate:=true    wildlife_spatial spatial_evaluator (R7/R10 vs truth)
 
 Run the simulation first, e.g.
   ros2 launch 41068_ignition_bringup 41068_ignition_husky.launch.py \
       slam:=true nav2:=true rviz:=true world:=large_demo
+
+world:= must name the same world as the simulation: the evaluator reads the
+animal and campfire poses from worlds/<world>.sdf. After moving animals with
+random_animal_spawn.py, pass ground_truth_file:=<json> instead.
 """
 
 from launch import LaunchDescription
@@ -94,6 +99,23 @@ def generate_launch_description():
         remappings=tf_remaps,
         condition=IfCondition(LaunchConfiguration('mission')),
     )
+    evaluator = Node(
+        package='wildlife_spatial',
+        executable='spatial_evaluator',
+        name='spatial_evaluator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': sim_time,
+            'ground_truth_world': PathJoinSubstitution(
+                [bringup_share, 'worlds', [LaunchConfiguration('world'), '.sdf']]),
+            # Takes precedence over ground_truth_world when not empty.
+            'ground_truth_file': ParameterValue(
+                LaunchConfiguration('ground_truth_file'), value_type=str),
+            'output_directory': ParameterValue(
+                LaunchConfiguration('evaluation_dir'), value_type=str),
+        }],
+        condition=IfCondition(LaunchConfiguration('evaluate')),
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('namespace', default_value='husky1'),
@@ -110,10 +132,19 @@ def generate_launch_description():
             'mission_params',
             default_value=PathJoinSubstitution([bringup_share, 'config', 'mission_params.yaml']),
             description='Parameter file for mission_node and husky_node.'),
+        DeclareLaunchArgument('evaluate', default_value='true',
+                              description='Start spatial_evaluator.'),
+        DeclareLaunchArgument('world', default_value='large_demo',
+                              description='Simulated world; truth source for the evaluator.'),
+        DeclareLaunchArgument('ground_truth_file', default_value='',
+                              description='Truth JSON overriding the world file.'),
+        DeclareLaunchArgument('evaluation_dir', default_value='~/wildtrack_runs/evaluation',
+                              description='Parent directory of evaluator run logs.'),
         explore,
         perception,
         localizer,
         registry,
         mission,
         husky,
+        evaluator,
     ])

@@ -1,25 +1,132 @@
 {
   "frame_id": "husky1_map",
+  "source": "Generated from 41068_ignition_bringup/worlds/large_demo.sdf (spatial_evaluator.ground_truth_objects_from_world). Not valid after random_animal_spawn.py moves animals.",
   "objects": [
     {
-      "id": "female_deer1",
-      "class_name": "deer",
-      "position": {"x": -6.0, "y": 5.0, "z": 0.0}
+      "id": "campfire1",
+      "class_name": "campfire",
+      "position": {
+        "x": -6.5,
+        "y": -6.0,
+        "z": 0.0
+      }
     },
     {
-      "id": "male_deer1",
-      "class_name": "deer",
-      "position": {"x": -3.0, "y": 5.0, "z": 0.0}
-    },
-    {
-      "id": "kangaroo1",
-      "class_name": "kangaroo",
-      "position": {"x": 4.0, "y": 7.0, "z": 0.0}
-    },
-    {
-      "id": "boar1",
+      "id": "boar_01",
       "class_name": "boar",
-      "position": {"x": 7.0, "y": -5.0, "z": 0.0}
+      "position": {
+        "x": -13.0,
+        "y": 6.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "kangaroo_01",
+      "class_name": "kangaroo",
+      "position": {
+        "x": -13.5,
+        "y": 7.4,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "boar_02",
+      "class_name": "boar",
+      "position": {
+        "x": 1.0,
+        "y": -12.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "boar_03",
+      "class_name": "boar",
+      "position": {
+        "x": 2.4,
+        "y": -12.6,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "boar_04",
+      "class_name": "boar",
+      "position": {
+        "x": 17.0,
+        "y": -2.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "male_deer_01",
+      "class_name": "deer",
+      "position": {
+        "x": 18.5,
+        "y": -2.5,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "boar_05",
+      "class_name": "boar",
+      "position": {
+        "x": 4.0,
+        "y": 10.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "female_deer_01",
+      "class_name": "deer",
+      "position": {
+        "x": -18.0,
+        "y": 12.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "female_deer_02",
+      "class_name": "deer",
+      "position": {
+        "x": -7.0,
+        "y": -18.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "male_deer_02",
+      "class_name": "deer",
+      "position": {
+        "x": 11.0,
+        "y": 18.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "kangaroo_02",
+      "class_name": "kangaroo",
+      "position": {
+        "x": 16.0,
+        "y": 8.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "kangaroo_03",
+      "class_name": "kangaroo",
+      "position": {
+        "x": -9.0,
+        "y": -13.0,
+        "z": 0.0
+      }
+    },
+    {
+      "id": "campfire2",
+      "class_name": "campfire",
+      "position": {
+        "x": 9.0,
+        "y": -5.0,
+        "z": 0.0
+      }
     }
   ]
 }

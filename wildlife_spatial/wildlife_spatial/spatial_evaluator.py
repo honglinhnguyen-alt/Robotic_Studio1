@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from statistics import mean
 from statistics import median
+import xml.etree.ElementTree as ElementTree
 
 import rclpy
 from rclpy.node import Node
@@ -41,6 +42,20 @@ CSV_FIELDS = [
     'spatial_error_m',
     'class_correct',
 ]
+
+# Gazebo model URI name -> evaluated class. Every heat source in the world is
+# listed, because the registry stores campfires as well as animals.
+WORLD_MODEL_CLASSES = {
+    'boar': 'boar',
+    'male_deer': 'deer',
+    'female_deer': 'deer',
+    'kangaroo': 'kangaroo',
+    'campfire': 'campfire',
+}
+
+# Heat sources that are not animals. Such a truth object counts as correctly
+# classified when its estimate carries no animal label.
+DEFAULT_NON_ANIMAL_CLASSES = ('campfire',)
 
 
 def detection_class(detection):
@@ -112,21 +127,65 @@ def match_detections(estimates, ground_truth, maximum_distance):
     return matches, unmatched_estimates, unmatched_truth
 
 
-def evaluate_detections(estimates, ground_truth, maximum_distance):
+def class_matches(estimate_class, truth_class, animal_classes,
+                  non_animal_classes):
+    """Return whether an estimate label is correct for a truth class."""
+    # An animal needs its exact label. A non-animal heat source (campfire) is
+    # correct when the estimate has no animal label, e.g. unknown_heat_source.
+    estimate_class = estimate_class.lower()
+    truth_class = truth_class.lower()
+    if truth_class in non_animal_classes:
+        return estimate_class not in animal_classes
+    return estimate_class == truth_class
+
+
+def per_class_metrics(ground_truth, matches, class_results):
+    """Return detection and classification recall for each truth class."""
+    per_class = {}
+    for truth in ground_truth:
+        entry = per_class.setdefault(detection_class(truth).lower(), {
+            'ground_truth': 0,
+            'detected': 0,
+            'correctly_classified': 0,
+        })
+        entry['ground_truth'] += 1
+    for (_, truth_index, _), correct in zip(matches, class_results):
+        entry = per_class[detection_class(ground_truth[truth_index]).lower()]
+        entry['detected'] += 1
+        entry['correctly_classified'] += int(correct)
+    for entry in per_class.values():
+        entry['detection_recall'] = entry['detected'] / entry['ground_truth']
+        entry['classification_recall'] = (
+            entry['correctly_classified'] / entry['ground_truth']
+        )
+    return per_class
+
+
+def evaluate_detections(estimates, ground_truth, maximum_distance,
+                        non_animal_classes=DEFAULT_NON_ANIMAL_CLASSES,
+                        localization_tolerance=1.0):
     """Compute localization, detection, and classification metrics."""
     matches, false_positives, missed = match_detections(
         estimates,
         ground_truth,
         maximum_distance,
     )
+    non_animal_classes = {name.lower() for name in non_animal_classes}
+    animal_classes = {
+        detection_class(truth).lower() for truth in ground_truth
+    } - non_animal_classes
     planar_errors = [item[2] for item in matches]
     spatial_errors = [
         spatial_distance(estimates[estimate_index], ground_truth[truth_index])
         for estimate_index, truth_index, _ in matches
     ]
     class_results = [
-        detection_class(estimates[estimate_index]).lower()
-        == detection_class(ground_truth[truth_index]).lower()
+        class_matches(
+            detection_class(estimates[estimate_index]),
+            detection_class(ground_truth[truth_index]),
+            animal_classes,
+            non_animal_classes,
+        )
         for estimate_index, truth_index, _ in matches
     ]
 
@@ -158,7 +217,15 @@ def evaluate_detections(estimates, ground_truth, maximum_distance):
         'classification_accuracy': (
             sum(class_results) / matched_count if matched_count else None
         ),
+        # R7: matched candidates whose planar error is within tolerance.
+        'localization_tolerance_m': localization_tolerance,
+        'within_tolerance_count': sum(
+            error <= localization_tolerance for error in planar_errors
+        ),
+        # R10 reads per_class['boar'].
+        'per_class': per_class_metrics(ground_truth, matches, class_results),
         'matches': matches,
+        'class_results': class_results,
         'false_positive_indices': false_positives,
         'missed_indices': missed,
     }
@@ -172,10 +239,14 @@ def load_ground_truth(path):
     frame_id = str(payload.get('frame_id', ''))
     if not frame_id:
         raise ValueError('ground-truth file must contain frame_id')
+    return ground_truth_message(frame_id, payload.get('objects', []))
 
+
+def ground_truth_message(frame_id, objects):
+    """Convert JSON-format truth objects into a Detection3DArray."""
     message = Detection3DArray()
     message.header.frame_id = frame_id
-    for item in payload.get('objects', []):
+    for item in objects:
         position = item['position']
         detection = Detection3D()
         detection.header.frame_id = frame_id
@@ -192,10 +263,47 @@ def load_ground_truth(path):
     return message
 
 
+def ground_truth_objects_from_world(path, model_classes=None):
+    """Return truth objects for every heat source included in an SDF world."""
+    # Reads each <include> whose model://<name> URI is in model_classes and
+    # uses its <pose> (x y z roll pitch yaw). The Husky spawns at the world
+    # origin with zero yaw, so SLAM's map frame coincides with the world
+    # frame. Layouts moved at runtime (random_animal_spawn.py) are not seen.
+    if model_classes is None:
+        model_classes = WORLD_MODEL_CLASSES
+    world = ElementTree.parse(Path(path).expanduser()).getroot().find('world')
+    if world is None:
+        raise ValueError(f'{path} contains no <world> element')
+
+    objects = []
+    for include in world.findall('include'):
+        uri = (include.findtext('uri') or '').strip()
+        model = uri.split('://', 1)[-1].strip('/').split('/')[0]
+        if model not in model_classes:
+            continue
+        pose = [float(value) for value in
+                (include.findtext('pose') or '0 0 0').split()]
+        x, y, z = (pose + [0.0, 0.0, 0.0])[:3]
+        objects.append({
+            'id': (include.findtext('name') or model).strip(),
+            'class_name': model_classes[model],
+            'position': {'x': x, 'y': y, 'z': z},
+        })
+    return objects
+
+
+def load_world_ground_truth(path, frame_id, model_classes=None):
+    """Load ground truth from an SDF world into a Detection3DArray."""
+    return ground_truth_message(
+        frame_id, ground_truth_objects_from_world(path, model_classes))
+
+
 def evaluation_rows(metrics, estimates, ground_truth):
     """Return detailed matched and unmatched rows for one evaluation."""
     rows = []
-    for estimate_index, truth_index, planar_error in metrics['matches']:
+    for (estimate_index, truth_index, planar_error), class_correct in zip(
+        metrics['matches'], metrics['class_results']
+    ):
         estimate = estimates[estimate_index]
         truth = ground_truth[truth_index]
         estimate_position = estimate.bbox.center.position
@@ -216,7 +324,7 @@ def evaluation_rows(metrics, estimates, ground_truth):
             'ground_truth_z': truth_position.z,
             'planar_error_m': planar_error,
             'spatial_error_m': spatial_distance(estimate, truth),
-            'class_correct': estimate_class.lower() == truth_class.lower(),
+            'class_correct': class_correct,
         })
 
     for estimate_index in metrics['false_positive_indices']:
@@ -264,8 +372,13 @@ class SpatialEvaluator(Node):
             '/husky1/evaluation/summary',
         )
         self.declare_parameter('ground_truth_file', '')
+        # SDF world used when ground_truth_file is empty.
+        self.declare_parameter('ground_truth_world', '')
         self.declare_parameter('map_frame', 'husky1_map')
         self.declare_parameter('maximum_match_distance', 2.0)
+        self.declare_parameter('localization_tolerance', 1.0)       # R7
+        self.declare_parameter(
+            'non_animal_classes', list(DEFAULT_NON_ANIMAL_CLASSES))
         self.declare_parameter(
             'output_directory',
             '~/wildlife_evaluation_logs',
@@ -279,10 +392,20 @@ class SpatialEvaluator(Node):
         ground_truth_file = str(
             self.get_parameter('ground_truth_file').value
         )
+        ground_truth_world = str(
+            self.get_parameter('ground_truth_world').value
+        )
         self._map_frame = str(self.get_parameter('map_frame').value)
         self._maximum_match_distance = float(
             self.get_parameter('maximum_match_distance').value
         )
+        self._localization_tolerance = float(
+            self.get_parameter('localization_tolerance').value
+        )
+        self._non_animal_classes = [
+            str(name) for name in
+            self.get_parameter('non_animal_classes').value
+        ]
         output_directory = Path(
             str(self.get_parameter('output_directory').value)
         ).expanduser()
@@ -328,15 +451,28 @@ class SpatialEvaluator(Node):
         self._registry = None
         self._ground_truth = None
         self._evaluation_index = 0
+        ground_truth_source = ground_truth_file or ground_truth_world
         if ground_truth_file:
             self._ground_truth = load_ground_truth(ground_truth_file)
+        elif ground_truth_world:
+            self._ground_truth = load_world_ground_truth(
+                ground_truth_world, self._map_frame)
 
         self.get_logger().info('Spatial evaluator started')
         self.get_logger().info(f'Registry input: {registry_topic}')
         self.get_logger().info(
             f'Ground truth: {ground_truth_topic}'
-            + (f' or {ground_truth_file}' if ground_truth_file else '')
+            + (f' or {ground_truth_source}' if ground_truth_source else '')
         )
+        if self._ground_truth is not None:
+            counts = {}
+            for truth in self._ground_truth.detections:
+                name = detection_class(truth)
+                counts[name] = counts.get(name, 0) + 1
+            self.get_logger().info(
+                f'Loaded {len(self._ground_truth.detections)} truth objects: '
+                + ', '.join(f'{k}={v}' for k, v in sorted(counts.items()))
+            )
         self.get_logger().info(f'Logs: {self._run_directory}')
 
     def _registry_callback(self, message):
@@ -370,6 +506,8 @@ class SpatialEvaluator(Node):
             estimates,
             ground_truth,
             self._maximum_match_distance,
+            self._non_animal_classes,
+            self._localization_tolerance,
         )
         rows = evaluation_rows(metrics, estimates, ground_truth)
         ros_time = (
@@ -391,6 +529,7 @@ class SpatialEvaluator(Node):
             key: value for key, value in metrics.items()
             if key not in {
                 'matches',
+                'class_results',
                 'false_positive_indices',
                 'missed_indices',
             }
@@ -415,12 +554,20 @@ class SpatialEvaluator(Node):
         error_text = 'n/a' if error is None else f'{error:.3f} m'
         accuracy = summary['classification_accuracy']
         accuracy_text = 'n/a' if accuracy is None else f'{accuracy:.1%}'
+        boar = summary['per_class'].get('boar')
+        boar_text = (
+            'n/a' if boar is None else
+            f'{boar["correctly_classified"]}/{boar["ground_truth"]}'
+        )
         self.get_logger().info(
             f'Evaluation {self._evaluation_index}: '
             f'matched={summary["matched_count"]}/'
             f'{summary["ground_truth_count"]}, '
             f'mean planar error={error_text}, '
-            f'class accuracy={accuracy_text}'
+            f'within {self._localization_tolerance:.1f} m='
+            f'{summary["within_tolerance_count"]}, '
+            f'class accuracy={accuracy_text}, '
+            f'boars confirmed={boar_text}'
         )
 
 
