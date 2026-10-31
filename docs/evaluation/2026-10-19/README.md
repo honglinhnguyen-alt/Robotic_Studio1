@@ -5,7 +5,7 @@
 
 | Condition | Layout |
 |---|---|
-| nominal_world | world file layout (`world:=large_demo`) |
+| nominal_world | world file layout (no seed at the time; now `seed:=world`) |
 | nominal_seed | `seed:=11..14`, animals in the open (>= 3 m from obstacles) |
 | cover_seed | `seed:=21..24 profile:=cover`, every animal 1-2 m from a tree |
 
