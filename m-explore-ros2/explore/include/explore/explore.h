@@ -192,6 +192,10 @@ private:
   int return_attempts_ = 0;
   static constexpr int kMaxReturnAttempts = 3;
   rclcpp::TimerBase::SharedPtr return_retry_timer_;
+  // True while the mission has paused exploration (thermal sweep or an
+  // investigation). No return-home goal may be sent then: it would fight the
+  // husky_node goal for Nav2. The return starts again on resume.
+  bool paused_ = false;
 
   geometry_msgs::msg::Point current_goal_;      // goal last sent to Nav2
   geometry_msgs::msg::Point current_centroid_;  // centroid of its frontier

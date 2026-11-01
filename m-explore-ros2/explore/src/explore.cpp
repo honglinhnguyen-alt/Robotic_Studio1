@@ -557,6 +557,10 @@ void Explore::returnToInitialPose()
   if (return_retry_timer_) {
     return_retry_timer_->cancel();
   }
+  if (paused_) {
+    RCLCPP_INFO(logger_, "Return home postponed: exploration is paused.");
+    return;
+  }
   ++return_attempts_;
   RCLCPP_INFO(logger_, "Returning to initial pose (attempt %d/%d).", return_attempts_,
               kMaxReturnAttempts);
@@ -580,6 +584,10 @@ void Explore::returnToInitialPose()
           status_pub_->publish(status_msg);
           RCLCPP_INFO(logger_, "Successfully returned to initial pose.");
           return_attempts_ = 0;
+        } else if (result.code == rclcpp_action::ResultCode::ABORTED && paused_) {
+          // Preempted by a husky_node goal after a pause: no retry, the
+          // return starts again when the mission resumes exploration.
+          RCLCPP_INFO(logger_, "Return home stopped: exploration is paused.");
         } else if (result.code == rclcpp_action::ResultCode::ABORTED &&
                    return_attempts_ < kMaxReturnAttempts) {
           // Not CANCELED: that is a pause by the mission, which restarts the
@@ -680,6 +688,8 @@ void Explore::stop(bool finished_exploring)
 {
   RCLCPP_INFO(logger_, "Exploration stopped.");
 
+  // A stop that is not the end of exploration is a pause by the mission.
+  paused_ = !finished_exploring;
   goal_active_ = false;
   // After a pause (e.g. mission node investigating an animal) the goal is
   // treated as new on resume, so the progress timer restarts instead of the
@@ -715,6 +725,7 @@ void Explore::stop(bool finished_exploring)
 
 void Explore::resume()
 {
+  paused_ = false;
   resuming_ = true;
   RCLCPP_INFO(logger_, "Exploration resuming.");
   auto status_msg = explore_lite_msgs::msg::ExploreStatus();
