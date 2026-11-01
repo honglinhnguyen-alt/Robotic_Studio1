@@ -14,9 +14,9 @@
 
     # R5: hot = hot_delta_k above the frame background (75th percentile) AND above the region's
     # local background (ring around its box). large_demo: ground ~293 K,
-    # trees/rocks ~300.7 K, animals/campfires ~330 K. A 3-5 K threshold (C1)
-    # would mark every tree (+7.7 K over the ground), so 10 K. Animals well
-    # below the old fixed 315 K are still found.
+    # trees/rocks ~300.7 K, kangaroos 322 K, deer 325 K, boars 328 K, campfires
+    # 330 K. A 3-5 K threshold (C1)
+    # would mark every tree (+7.7 K over the ground), so 10 K.
     # hot_threshold_mode: absolute restores the fixed hot_threshold_k.
     hot_threshold_mode: relative
     hot_delta_k: 10.0

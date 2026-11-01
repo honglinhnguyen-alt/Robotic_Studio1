@@ -19,7 +19,7 @@
       <plugin
         filename="ignition-gazebo-thermal-system"
         name="gz::sim::systems::Thermal">
-        <temperature>330.15</temperature>
+        <temperature>325.15</temperature>
       </plugin>
 
     </visual>
