@@ -1,0 +1,19 @@
+label,completed,returned_home,wall_s,end_reason,attempts
+nominal_world_1,1,1,1428,returned,1
+nominal_seed11,1,1,1117,returned,1
+cover_seed21,1,1,1167,returned,1
+nominal_world_2,1,1,1127,returned,1
+nominal_seed12,1,1,1007,returned,1
+cover_seed22,1,1,1007,returned,1
+nominal_world_3,1,1,1086,returned,1
+nominal_seed13,1,1,1137,returned,1
+cover_seed23,1,1,1147,returned,1
+nominal_world_4,1,1,1055,returned (rerun after explore fix),1
+nominal_seed14,1,1,1307,returned,1
+cover_seed24,1,1,1208,returned,1
+nominal_world_5,1,0,1277,return_timeout,1
+nominal_seed15,1,1,1087,returned,1
+cover_seed25,1,1,1177,returned,1
+nominal_world_6,1,1,1157,returned,1
+nominal_seed16,1,1,1037,returned,1
+cover_seed26,1,1,1257,returned (rerun after explore fix),1
